@@ -78,7 +78,7 @@ export default function SearchScreen() {
     queryKey: queryKeys.search.books(submittedQuery, {}),
     queryFn: () => booksApi.searchBooks({ q: submittedQuery, page_size: 20 }),
     enabled: submittedQuery.length > 0,
-    select: (res) => res.data.results,
+    select: (res) => res.data?.results ?? (Array.isArray(res.data) ? res.data : []),
   });
 
   const handleSubmit = async (overrideText?: string) => {

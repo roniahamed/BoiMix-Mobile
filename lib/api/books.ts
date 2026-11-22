@@ -41,10 +41,22 @@ export const booksApi = {
       params,
     }),
 
-  searchBooks: (params: BookListParams & { q: string }) =>
-    apiClient.get<PaginatedResponse<BookCardBook>>(API_ENDPOINTS.SEARCH.BOOKS, {
-      params,
-    }),
+  searchBooks: async (params: BookListParams & { q: string }) => {
+    try {
+      const res = await apiClient.get<PaginatedResponse<BookCardBook>>(API_ENDPOINTS.SEARCH.BOOKS, {
+        params,
+      });
+      if (res.data?.results && res.data.results.length > 0) {
+        return res;
+      }
+    } catch {
+      // Continue to catalog search fallback
+    }
+    // High-resilience catalog search fallback supporting Bengali & English queries
+    return apiClient.get<PaginatedResponse<BookCardBook>>(API_ENDPOINTS.BOOKS.LIST, {
+      params: { ...params, search: params.q },
+    });
+  },
 
   getBookDetail: (slug: string) =>
     apiClient.get<BookDetailResponse | BookCardBook>(API_ENDPOINTS.BOOKS.DETAIL(slug)),

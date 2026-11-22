@@ -27,33 +27,6 @@ type MessageItem = {
   createdAt: string;
 };
 
-const DEMO_THREAD: MessageItem[] = [
-  {
-    id: "m-init-1",
-    body: "আসসালামু আলাইকুম! 'লালসালু' বইটি কি এখনও এভেইলেবল আছে?",
-    isMe: true,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-  },
-  {
-    id: "m-init-2",
-    body: "ওয়ালাইকুম আসসালাম! হ্যাঁ ভাইয়া, বইটি সম্পূর্ণ ভালো অবস্থায় আছে। মাত্র একবার পড়া হয়েছে।",
-    isMe: false,
-    createdAt: new Date(Date.now() - 1000 * 60 * 50).toISOString(),
-  },
-  {
-    id: "m-init-3",
-    body: "বিক্রয়মূল্য কি কিছু কমানো সম্ভব হবে?",
-    isMe: true,
-    createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-  },
-  {
-    id: "m-init-4",
-    body: "ভাইয়া, এটা এমনিতেই ৫০% ছাড়ে দেওয়া আছে। তবে সরাসরি ধানমন্ডি থেকে নিলে কিছুটা বিবেচনা করা যাবে।",
-    isMe: false,
-    createdAt: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
-  },
-];
-
 function formatMessageTime(isoString: string) {
   const d = new Date(isoString);
   return d.toLocaleTimeString("bn-BD", { hour: "2-digit", minute: "2-digit" });
@@ -88,39 +61,45 @@ export default function ChatDetailScreen() {
       if (id && user) {
         try {
           const res = await messagesApi.getMessages(id, { limit: 50 });
-          const items = Array.isArray(res.data) ? res.data : [];
-          if (items.length > 0) {
-            return items.map((m: any) => ({
-              id: m.id,
-              body: m.body,
-              isMe: m.sender?.id === user.id || m.sender?.username === user.username,
-              createdAt: m.created_at || new Date().toISOString(),
-            }));
-          }
+          const items = Array.isArray(res.data) ? res.data : (res.data as any)?.results ?? [];
+          return items.map((m: any) => ({
+            id: m.id,
+            body: m.body,
+            isMe: m.sender?.id === user.id || m.sender?.username === user.username,
+            createdAt: m.created_at || m.createdAt || new Date().toISOString(),
+          }));
         } catch {
-          // Fallback to demo thread
+          return [];
         }
       }
-      return DEMO_THREAD;
+      return [];
     },
-    refetchInterval: 10000,
+    refetchInterval: 5000,
   });
 
   const sendMutation = useMutation({
     mutationFn: async (text: string) => {
-      if (id && user) {
+      if (!id || !user) throw new Error("লগইন প্রয়োজন");
+      try {
+        const res = await messagesApi.sendMessage(id, { body: text });
+        return res.data;
+      } catch (err: any) {
+        // If id was a recipient user ID/username instead of conversation ID, try createConversation
         try {
-          const res = await messagesApi.sendMessage(id, { body: text });
-          return res.data;
+          await messagesApi.createConversation({
+            recipient_id: id.includes("-") && id.length === 36 ? id : undefined,
+            recipient_username: !id.includes("-") ? id : undefined,
+            initial_message: text,
+          });
+          return {
+            id: `msg-${Date.now()}`,
+            body: text,
+            createdAt: new Date().toISOString(),
+          };
         } catch {
-          // If demo / mock mode
+          throw err;
         }
       }
-      return {
-        id: `local-${Date.now()}`,
-        body: text,
-        created_at: new Date().toISOString(),
-      };
     },
     onSuccess: (newMsg) => {
       queryClient.setQueryData<MessageItem[]>(
@@ -238,6 +217,17 @@ export default function ChatDetailScreen() {
               </Text>
             </View>
           )}
+          ListEmptyComponent={
+            <View className="items-center justify-center py-20 px-6">
+              <View className="w-14 h-14 rounded-full bg-primary/10 items-center justify-center mb-3">
+                <Ionicons name="chatbubbles-outline" size={28} color={Colors.primary} />
+              </View>
+              <Text className="text-base font-bold text-text-primary">কথোপকথন শুরু করুন</Text>
+              <Text className="text-xs text-text-muted mt-1 text-center">
+                {displayName ? `${displayName}-কে আপনার বার্তা বা বই সংক্রান্ত প্রশ্ন পাঠিয়ে চ্যাট শুরু করুন।` : "বার্তা লিখে পাঠান।"}
+              </Text>
+            </View>
+          }
         />
       )}
 

@@ -19,63 +19,6 @@ import { messagesApi } from "@/lib/api/messages";
 import { useAuthStore } from "@/stores/auth-store";
 import { resolveMediaUrl } from "@/lib/utils/media";
 
-const FALLBACK_CONVERSATIONS: any[] = [
-  {
-    id: "conv-demo-1",
-    other_participant: {
-      id: "u-101",
-      username: "tanjil_reader",
-      full_name: "তানজিল আহমেদ",
-      avatar_url: null,
-      is_online: true,
-    },
-    last_message: {
-      id: "m-1",
-      body: "ভাইয়া, 'লালসালু' বইটি কি এখনও পাওয়া যাবে? আমি ধানমন্ডি থেকে নিতে পারি।",
-      created_at: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
-    },
-    unread_count: 2,
-    context_type: "listing",
-    updated_at: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
-  },
-  {
-    id: "conv-demo-2",
-    other_participant: {
-      id: "u-102",
-      username: "booklover_sakib",
-      full_name: "সাকিব হাসান",
-      avatar_url: null,
-      is_online: false,
-    },
-    last_message: {
-      id: "m-2",
-      body: "হ্যাঁ, আমি আগামীকাল বিকেলে বই বিনিময়ের জন্য দেখা করতে পারব।",
-      created_at: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString(),
-    },
-    unread_count: 0,
-    context_type: "exchange",
-    updated_at: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString(),
-  },
-  {
-    id: "conv-demo-3",
-    other_participant: {
-      id: "u-support",
-      username: "boimix_support",
-      full_name: "BoiMix সাপোর্ট টিম",
-      avatar_url: null,
-      is_online: true,
-    },
-    last_message: {
-      id: "m-3",
-      body: "আপনার ডেলিভারি সংক্রান্ত কোনো তথ্য লাগলে আমাদের জানাতে পারেন।",
-      created_at: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-    },
-    unread_count: 0,
-    context_type: "support",
-    updated_at: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-  },
-];
-
 function formatTime(isoString?: string) {
   if (!isoString) return "";
   const date = new Date(isoString);
@@ -101,14 +44,14 @@ export default function MessagesScreen() {
       if (user) {
         try {
           const res = await messagesApi.getConversations({ search: search || undefined });
-          const items = res.data?.results;
-          if (items && items.length > 0) return items;
+          return res.data?.results ?? (Array.isArray(res.data) ? res.data : []);
         } catch {
-          // Fallback to demo conversations
+          return [];
         }
       }
-      return FALLBACK_CONVERSATIONS;
+      return [];
     },
+    enabled: !!user,
   });
 
   const onRefresh = async () => {

@@ -1,10 +1,15 @@
 export type ChatUser = {
   id: string;
   username: string;
-  fullName: string;
+  fullName?: string;
+  full_name?: string;
+  name?: string;
   avatarUrl?: string | null;
+  avatar_url?: string | null;
   isOnline?: boolean;
+  is_online?: boolean;
   lastSeenAt?: string | null;
+  last_seen_at?: string | null;
 };
 
 export type ChatAttachment = {
@@ -38,38 +43,54 @@ export type ChatExchangeProposal = {
 
 export type ChatMessage = {
   id: string;
-  conversationId: string;
-  sender: ChatUser;
+  conversationId?: string;
+  conversation_id?: string;
+  sender?: ChatUser;
   body: string;
   previewText?: string;
-  messageType: "text" | "image" | "exchange_proposal" | "system";
-  createdAt: string;
+  preview_text?: string;
+  messageType?: "text" | "image" | "exchange_proposal" | "system";
+  message_type?: "text" | "image" | "exchange_proposal" | "system";
+  createdAt?: string;
+  created_at?: string;
   isRead?: boolean;
+  is_read?: boolean;
   attachments?: ChatAttachment[];
   exchangeProposal?: ChatExchangeProposal | null;
+  exchange_proposal?: ChatExchangeProposal | null;
 };
 
 export type Conversation = {
   id: string;
-  contextType:
+  contextType?:
     | "direct"
     | "support"
     | "listing"
     | "order"
     | "borrow"
-    | "exchange";
+    | "exchange"
+    | string;
+  context_type?: string;
   contextId?: string | null;
+  context_id?: string | null;
   contextPreview?: any;
-  participants: ChatUser[];
+  context_preview?: any;
+  participants?: ChatUser[];
   otherParticipant?: ChatUser | null;
+  other_participant?: ChatUser | null;
   lastMessage?: ChatMessage | null;
-  unreadCount: number;
-  createdAt: string;
-  updatedAt: string;
+  last_message?: ChatMessage | null;
+  unreadCount?: number;
+  unread_count?: number;
+  createdAt?: string;
+  created_at?: string;
+  updatedAt?: string;
+  updated_at?: string;
 };
 
 export type CreateConversationPayload = {
-  recipient_id: string;
+  recipient_id?: string;
+  recipient_username?: string;
   context_type?: string;
   context_id?: string;
   initial_message?: string;

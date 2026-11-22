@@ -9,7 +9,10 @@ import {
   Alert,
   Modal,
   TextInput,
+  Platform,
+  Linking,
 } from "react-native";
+import * as WebBrowser from "expo-web-browser";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -20,6 +23,7 @@ import { Button } from "@/components/ui/Button";
 import { BookCard } from "@/components/shared/BookCard";
 import { booksApi } from "@/lib/api/books";
 import { queryKeys } from "@/lib/api/query-keys";
+import { messagesApi } from "@/lib/api/messages";
 import { useAuthStore } from "@/stores/auth-store";
 import { useCartStore } from "@/stores/cart-store";
 import { useWishlistStore } from "@/stores/wishlist-store";
@@ -40,6 +44,16 @@ export default function BookDetailScreen() {
 
   const wishlisted = isWishlisted(slug ?? "");
 
+  // ── Images & Gallery state ──
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
+
+  // ── PDF preview modal state ──
+  const [showPdfModal, setShowPdfModal] = useState(false);
+
+  // ── Chat creation state ──
+  const [creatingChat, setCreatingChat] = useState(false);
+
   // ── Reviews state & query ──
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [reviewRating, setReviewRating] = useState(5);
@@ -49,46 +63,36 @@ export default function BookDetailScreen() {
   const { data: reviewsData, refetch: refetchReviews } = useQuery<BookReviewItem[]>({
     queryKey: ["book-reviews", slug],
     queryFn: async () => {
+      if (!slug) return [];
       try {
-        if (slug) {
-          const res = await reviewsApi.getBookReviews(slug);
-          const results = res.data?.results;
-          if (results && results.length > 0) return results;
-        }
+        const res = await reviewsApi.getBookReviews(slug);
+        return res.data?.results ?? (Array.isArray(res.data) ? res.data : []);
       } catch {
-        // fallback demo reviews
+        return [];
       }
-      return [
-        {
-          id: "rev-1",
-          reviewer: {
-            id: "u-1",
-            username: "hasan_read",
-            name: "হাসান মাহমুদ",
-            avatarUrl: null,
-          },
-          rating: 5,
-          comment: "বইটির কন্ডিশন খুবই চমৎকার ছিল। ডেলিভারিও দ্রুত পেয়েছি। দারুণ অভিজ্ঞতা!",
-          likesCount: 6,
-          created_at: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(),
-        },
-        {
-          id: "rev-2",
-          reviewer: {
-            id: "u-2",
-            username: "fatema_books",
-            name: "ফাতেমা তুজ জোহরা",
-            avatarUrl: null,
-          },
-          rating: 4,
-          comment: "উপন্যাসটি অনেক ভালো লেগেছে। প্যাকেজিং খুব যত্নশীল ছিল।",
-          likesCount: 3,
-          created_at: new Date(Date.now() - 1000 * 60 * 60 * 96).toISOString(),
-        },
-      ];
     },
     enabled: !!slug,
   });
+
+  const voteReviewMutation = useMutation({
+    mutationFn: async ({ reviewId, vote }: { reviewId: string; vote: "upvote" | "downvote" }) => {
+      return reviewsApi.voteReview(reviewId, vote);
+    },
+    onSuccess: () => {
+      refetchReviews();
+    },
+    onError: (err: any) => {
+      Alert.alert("ত্রুটি", err?.response?.data?.message || err?.message || "ভোট গ্রহণ করা সম্ভব হয়নি।");
+    },
+  });
+
+  const handleVoteReview = (reviewId: string) => {
+    if (!user) {
+      router.push("/auth/login");
+      return;
+    }
+    voteReviewMutation.mutate({ reviewId, vote: "upvote" });
+  };
 
   const handleSubmitReview = async () => {
     if (!user) {
@@ -128,7 +132,16 @@ export default function BookDetailScreen() {
         const res = await booksApi.getBookDetail(slug ?? "");
         const d = res.data;
         if (d && typeof d === "object" && "book" in d && (d as any).book) {
-          return (d as any).book as BookCardBook;
+          const b = (d as any).book;
+          const owner = (d as any).owner;
+          return {
+            ...b,
+            owner,
+            sellerId: b.sellerId || owner?.id,
+            ownerId: b.ownerId || owner?.id,
+            sellerName: owner?.name || owner?.username,
+            sellerUsername: owner?.username,
+          } as BookCardBook & { owner?: any; sellerName?: string; sellerUsername?: string };
         }
         return d as BookCardBook;
       } catch (err) {
@@ -203,6 +216,77 @@ export default function BookDetailScreen() {
     });
   };
 
+  const handleMessageOwner = async () => {
+    if (!user) {
+      router.push("/auth/login");
+      return;
+    }
+    if (isOwner) {
+      Alert.alert("তথ্য", "এটি আপনার নিজের বইয়ের লিস্টিং।");
+      return;
+    }
+    if (!book) return;
+
+    const sellerId = book.sellerId || (book as any).ownerId;
+    const sellerUsername = (book as any).sellerUsername || (book as any).ownerUsername || (book as any).owner?.username;
+    const sellerDisplayName = (book as any).sellerName || (book as any).ownerName || (book as any).owner?.name || book.author;
+    const sellerAvatar = (book as any).owner?.avatarUrl;
+
+    setCreatingChat(true);
+    try {
+      const res = await messagesApi.createConversation({
+        recipient_id: sellerId && sellerId.includes("-") ? sellerId : undefined,
+        recipient_username: sellerUsername || (!sellerId?.includes("-") ? sellerId : undefined),
+        context_type: "book",
+        context_id: book.id,
+        initial_message: `বই সম্পর্কিত বার্তা: "${book.title}"`,
+      });
+      const conv = res.data;
+      router.push({
+        pathname: "/messages/[id]",
+        params: {
+          id: conv.id,
+          name: sellerDisplayName,
+          username: sellerUsername || "",
+          avatar: sellerAvatar || "",
+        },
+      });
+    } catch {
+      router.push({
+        pathname: "/messages/[id]",
+        params: {
+          id: sellerId || sellerUsername || `user-${book.id}`,
+          name: sellerDisplayName,
+          username: sellerUsername || "",
+          avatar: sellerAvatar || "",
+        },
+      });
+    } finally {
+      setCreatingChat(false);
+    }
+  };
+
+  const handleOpenPdfPreview = async () => {
+    if (!book) return;
+    const rawPdf = book.previewPdfUrl || (book as any).preview_pdf_url;
+    if (!rawPdf) {
+      Alert.alert("দুঃখিত", "এই বইটির কোনো প্রিভিউ পিডিএফ পাওয়া যায়নি।");
+      return;
+    }
+    const fullUrl = resolveMediaUrl(rawPdf);
+    if (Platform.OS === "web") {
+      setShowPdfModal(true);
+    } else {
+      try {
+        await WebBrowser.openBrowserAsync(fullUrl);
+      } catch {
+        Linking.openURL(fullUrl).catch(() => {
+          setShowPdfModal(true);
+        });
+      }
+    }
+  };
+
   const handleShare = async () => {
     if (!book) return;
     await Share.share({
@@ -213,6 +297,26 @@ export default function BookDetailScreen() {
 
   const isOwner = user?.id === book?.ownerId || user?.id === book?.sellerId;
   const conditionLabel = BOOK_CONDITION_LABELS.find((c) => c.value === book?.condition);
+
+  // Extract all images (frontCover, backCover, insidePages, tocImage, indexImage, etc.)
+  const allImages: { url: string; label: string }[] = [];
+  if (book && Array.isArray((book as any).images) && (book as any).images.length > 0) {
+    (book as any).images.forEach((img: any, idx: number) => {
+      const src = typeof img === "string" ? img : img?.src || img?.url || img?.originalUrl;
+      if (src && !allImages.some((i) => i.url === src)) {
+        let label = `ছবি ${idx + 1}`;
+        if (img?.type === "frontCover") label = "সামনের প্রচ্ছদ";
+        else if (img?.type === "backCover") label = "পেছনের প্রচ্ছদ";
+        else if (img?.type === "insidePages") label = "ভেতরের পাতা";
+        else if (img?.type === "tocImage") label = "সূচিপত্র";
+        else if (img?.type === "indexImage") label = "ইনডেক্স পাতা";
+        allImages.push({ url: src, label });
+      }
+    });
+  }
+  if (allImages.length === 0 && book?.coverUrl) {
+    allImages.push({ url: book.coverUrl, label: "মূল প্রচ্ছদ" });
+  }
 
   // ── Loading ───────────────────────────────────────────────────────────────
   if (isLoading) {
@@ -243,14 +347,61 @@ export default function BookDetailScreen() {
   return (
     <View className="flex-1 bg-white">
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Cover Image */}
+        {/* Cover / Multi-Image Carousel */}
         <View className="relative bg-surface-dark">
-          <Image
-            source={{ uri: resolveMediaUrl(book.coverUrl) }}
-            style={{ width: "100%", height: 320 }}
-            contentFit="cover"
-            transition={300}
-          />
+          <TouchableOpacity
+            activeOpacity={0.95}
+            onPress={() => setFullScreenImage(allImages[activeImageIndex]?.url || book.coverUrl)}
+          >
+            <Image
+              source={{ uri: resolveMediaUrl(allImages[activeImageIndex]?.url || book.coverUrl) }}
+              style={{ width: "100%", height: 340 }}
+              contentFit="contain"
+              transition={200}
+            />
+          </TouchableOpacity>
+
+          {/* Image index counter badge if multiple images */}
+          {allImages.length > 1 && (
+            <View className="absolute bottom-3 right-4 bg-black/60 px-2.5 py-1 rounded-full flex-row items-center gap-1">
+              <Ionicons name="images-outline" size={12} color="#FFFFFF" />
+              <Text className="text-white text-xs font-bold">
+                {activeImageIndex + 1} / {allImages.length}
+              </Text>
+            </View>
+          )}
+
+          {/* Current image label badge (e.g. সামনের প্রচ্ছদ, ভেতরের পাতা) */}
+          {allImages[activeImageIndex]?.label && (
+            <View className="absolute bottom-3 left-4 bg-black/60 px-2.5 py-1 rounded-md">
+              <Text className="text-white text-[11px] font-semibold">
+                {allImages[activeImageIndex].label}
+              </Text>
+            </View>
+          )}
+
+          {/* Left / Right Nav Arrows if multiple images */}
+          {allImages.length > 1 && (
+            <>
+              {activeImageIndex > 0 && (
+                <TouchableOpacity
+                  onPress={() => setActiveImageIndex((prev) => Math.max(0, prev - 1))}
+                  className="absolute left-3 top-1/2 -mt-4 w-8 h-8 rounded-full bg-black/40 items-center justify-center"
+                >
+                  <Ionicons name="chevron-back" size={20} color="#FFFFFF" />
+                </TouchableOpacity>
+              )}
+              {activeImageIndex < allImages.length - 1 && (
+                <TouchableOpacity
+                  onPress={() => setActiveImageIndex((prev) => Math.min(allImages.length - 1, prev + 1))}
+                  className="absolute right-3 top-1/2 -mt-4 w-8 h-8 rounded-full bg-black/40 items-center justify-center"
+                >
+                  <Ionicons name="chevron-forward" size={20} color="#FFFFFF" />
+                </TouchableOpacity>
+              )}
+            </>
+          )}
+
           {/* Back Button */}
           <TouchableOpacity
             onPress={() => router.back()}
@@ -259,6 +410,7 @@ export default function BookDetailScreen() {
           >
             <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
           </TouchableOpacity>
+
           {/* Wishlist & Share */}
           <View style={{ top: insets.top + 8 }} className="absolute right-4 gap-2">
             <TouchableOpacity
@@ -279,6 +431,41 @@ export default function BookDetailScreen() {
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* Thumbnails row if multiple images */}
+        {allImages.length > 1 && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 10, gap: 10 }}
+            className="bg-white border-b border-border-light"
+          >
+            {allImages.map((img, idx) => {
+              const isSelected = activeImageIndex === idx;
+              return (
+                <TouchableOpacity
+                  key={img.url + idx}
+                  onPress={() => setActiveImageIndex(idx)}
+                  className={`rounded-xl overflow-hidden border-2 items-center ${
+                    isSelected ? "border-primary" : "border-border-light opacity-70"
+                  }`}
+                  style={{ width: 62 }}
+                >
+                  <Image
+                    source={{ uri: resolveMediaUrl(img.url) }}
+                    style={{ width: 58, height: 72 }}
+                    contentFit="cover"
+                  />
+                  <View className="bg-surface-dark w-full py-0.5 items-center">
+                    <Text className={`text-[9px] font-bold ${isSelected ? "text-primary" : "text-text-muted"}`} numberOfLines={1}>
+                      {img.label}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        )}
 
         <View className="p-5">
           {/* Badges row */}
@@ -396,21 +583,9 @@ export default function BookDetailScreen() {
                 </View>
               )}
               <Button
-                label="মালিককে মেসেজ দিন"
-                onPress={() => {
-                  if (!user) {
-                    router.push("/auth/login");
-                    return;
-                  }
-                  router.push({
-                    pathname: "/messages/[id]",
-                    params: {
-                      id: `conv-book-${book.id}`,
-                      name: (book as any).sellerName || (book as any).ownerName || book.author,
-                      username: (book as any).sellerUsername || (book as any).ownerUsername || "",
-                    },
-                  });
-                }}
+                label={creatingChat ? "মেসেজ রুম প্রস্তুত হচ্ছে..." : "মালিককে মেসেজ দিন"}
+                onPress={handleMessageOwner}
+                loading={creatingChat}
                 variant="outline"
                 leftIcon={<Ionicons name="chatbubble-ellipses-outline" size={18} color={Colors.primary} />}
               />
@@ -441,20 +616,51 @@ export default function BookDetailScreen() {
           )}
 
           {/* PDF Preview */}
-          {book.hasPreviewPdf && book.previewPdfUrl && (
+          {(book.hasPreviewPdf || (book as any).preview_pdf_url || book.previewPdfUrl) && (
             <TouchableOpacity
               className="flex-row items-center gap-3 bg-info/10 border border-info rounded-xl p-4 mb-5"
-              onPress={() => router.push({ pathname: "/near-me" as never })}
+              onPress={handleOpenPdfPreview}
             >
               <Ionicons name="document-text-outline" size={24} color={Colors.info} />
               <View className="flex-1">
                 <Text className="text-sm font-semibold text-info">প্রিভিউ পড়ুন</Text>
                 <Text className="text-xs text-text-secondary">
-                  {book.previewPdfPages ? `${book.previewPdfPages} পৃষ্ঠা` : "পিডিএফ প্রিভিউ"}
+                  {book.previewPdfPages ? `${book.previewPdfPages} পৃষ্ঠা` : "বইয়ের নির্বাচিত অংশ"}
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={Colors.info} />
             </TouchableOpacity>
+          )}
+
+          {/* Seller / Owner Info Card */}
+          {((book as any).owner || book.sellerId) && (
+            <View className="mb-5 p-4 rounded-2xl bg-surface-dark border border-border-light">
+              <View className="flex-row items-center justify-between">
+                <View className="flex-row items-center flex-1 mr-2">
+                  <View className="w-12 h-12 rounded-full bg-primary/10 items-center justify-center mr-3">
+                    <Ionicons name="person" size={24} color={Colors.primary} />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-sm font-bold text-text-primary" numberOfLines={1}>
+                      {(book as any).owner?.name || (book as any).sellerName || "বইবিক্রেতা"}
+                    </Text>
+                    <Text className="text-xs text-text-muted">
+                      {(book as any).owner?.location || book.location || "বাংলাদেশ"}
+                    </Text>
+                  </View>
+                </View>
+                {!isOwner && (
+                  <TouchableOpacity
+                    onPress={handleMessageOwner}
+                    disabled={creatingChat}
+                    className="flex-row items-center bg-primary px-3 py-2 rounded-xl"
+                  >
+                    <Ionicons name="chatbubble-ellipses-outline" size={15} color="#FFFFFF" />
+                    <Text className="text-xs font-bold text-white ml-1">মেসেজ</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
           )}
 
           {/* More from Seller */}
@@ -528,14 +734,27 @@ export default function BookDetailScreen() {
                       {rev.comment}
                     </Text>
 
-                    {rev.likesCount !== undefined && (
-                      <View className="flex-row items-center mt-2.5 pt-2 border-t border-border-light">
-                        <Ionicons name="thumbs-up-outline" size={13} color={Colors.textMuted} />
-                        <Text className="text-[11px] text-text-muted ml-1">
-                          {rev.likesCount} জন সহমত জানিয়েছেন
-                        </Text>
-                      </View>
-                    )}
+                    {/* Like / Upvote Button */}
+                    <TouchableOpacity
+                      onPress={() => handleVoteReview(rev.id)}
+                      activeOpacity={0.7}
+                      className={`flex-row items-center mt-2.5 pt-2 border-t border-border-light self-start px-2 py-1 rounded-lg ${
+                        rev.userVote === "upvote" ? "bg-primary/10" : ""
+                      }`}
+                    >
+                      <Ionicons
+                        name={rev.userVote === "upvote" ? "thumbs-up" : "thumbs-up-outline"}
+                        size={14}
+                        color={rev.userVote === "upvote" ? Colors.primary : Colors.textMuted}
+                      />
+                      <Text
+                        className={`text-xs ml-1.5 ${
+                          rev.userVote === "upvote" ? "font-bold text-primary" : "text-text-muted"
+                        }`}
+                      >
+                        {rev.likesCount ?? 0} জন সহমত
+                      </Text>
+                    </TouchableOpacity>
                   </View>
                 ))}
               </View>
@@ -624,6 +843,103 @@ export default function BookDetailScreen() {
               </TouchableOpacity>
             </View>
           </View>
+        </View>
+      </Modal>
+      {/* PDF Preview Modal */}
+      <Modal
+        visible={showPdfModal}
+        animationType="slide"
+        transparent={false}
+        onRequestClose={() => setShowPdfModal(false)}
+      >
+        <View className="flex-1 bg-surface-dark" style={{ paddingTop: insets.top }}>
+          {/* Header */}
+          <View className="flex-row items-center justify-between px-4 py-3 bg-white border-b border-border-light shadow-sm">
+            <TouchableOpacity
+              onPress={() => setShowPdfModal(false)}
+              className="w-9 h-9 rounded-full bg-slate-100 items-center justify-center"
+            >
+              <Ionicons name="close" size={20} color={Colors.textPrimary} />
+            </TouchableOpacity>
+            <View className="flex-1 px-3">
+              <Text className="text-sm font-bold text-text-primary" numberOfLines={1}>
+                {book?.title} (পিডিএফ প্রিভিউ)
+              </Text>
+              <Text className="text-[11px] text-text-muted">
+                {book?.previewPdfPages ? `${book.previewPdfPages} পৃষ্ঠা` : "বইয়ের নির্বাচিত অংশ"}
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => {
+                const pdf = resolveMediaUrl(book?.previewPdfUrl || (book as any)?.preview_pdf_url);
+                if (Platform.OS === "web") {
+                  if (typeof window !== "undefined") window.open(pdf, "_blank");
+                } else {
+                  Linking.openURL(pdf);
+                }
+              }}
+              className="p-2"
+            >
+              <Ionicons name="open-outline" size={20} color={Colors.primary} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Viewer Container */}
+          {Platform.OS === "web" ? (
+            <View style={{ flex: 1, backgroundColor: "#262626" }}>
+              <iframe
+                src={resolveMediaUrl(book?.previewPdfUrl || (book as any)?.preview_pdf_url)}
+                style={{ width: "100%", height: "100%", border: "none" } as any}
+                title="Book PDF Preview"
+              />
+            </View>
+          ) : (
+            <View className="flex-1 items-center justify-center p-6 bg-white">
+              <View className="w-16 h-16 rounded-2xl bg-primary/10 items-center justify-center mb-4">
+                <Ionicons name="document-text" size={36} color={Colors.primary} />
+              </View>
+              <Text className="text-base font-bold text-text-primary text-center">
+                পিডিএফ প্রিভিউ রিডার
+              </Text>
+              <Text className="text-xs text-text-muted text-center mt-1 mb-6 max-w-xs">
+                ডিভাইসের বিল্ট-ইন রিডারে সম্পূর্ণ প্রিভিউটি পড়তে নিচের বাটনে চাপ দিন।
+              </Text>
+              <Button
+                label="রিডারে প্রিভিউ খুলুন"
+                onPress={() => {
+                  const pdf = resolveMediaUrl(book?.previewPdfUrl || (book as any)?.preview_pdf_url);
+                  WebBrowser.openBrowserAsync(pdf);
+                }}
+                leftIcon={<Ionicons name="book-outline" size={18} color="#FFF" />}
+                fullWidth={false}
+              />
+            </View>
+          )}
+        </View>
+      </Modal>
+
+      {/* Fullscreen Image Modal */}
+      <Modal
+        visible={!!fullScreenImage}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setFullScreenImage(null)}
+      >
+        <View className="flex-1 bg-black items-center justify-center relative">
+          <TouchableOpacity
+            onPress={() => setFullScreenImage(null)}
+            style={{ top: insets.top + 16 }}
+            className="absolute right-5 w-10 h-10 rounded-full bg-white/20 items-center justify-center z-10"
+          >
+            <Ionicons name="close" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+          {fullScreenImage && (
+            <Image
+              source={{ uri: resolveMediaUrl(fullScreenImage) }}
+              style={{ width: "100%", height: "80%" }}
+              contentFit="contain"
+            />
+          )}
         </View>
       </Modal>
     </View>

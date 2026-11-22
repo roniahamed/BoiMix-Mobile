@@ -100,14 +100,14 @@ export const API_ENDPOINTS = {
     SUMMARY: "/notifications/summary/",
     DEVICES: "/notifications/devices/",
   },
-  // Chat & Messaging (Mounted at /api/v1/chat/)
+  // Chat & Messaging (Mounted at /api/v1/messages/)
   CHAT: {
-    CONVERSATIONS: "/conversations/",
-    CONVERSATION: (id: string) => `/conversations/${id}/`,
-    MESSAGES: (id: string) => `/conversations/${id}/messages/`,
-    MARK_READ: (id: string) => `/conversations/${id}/read/`,
-    UNREAD_COUNT: "/unread-count/",
-    SUPPORT: "/support/",
+    CONVERSATIONS: "/messages/conversations/",
+    CONVERSATION: (id: string) => `/messages/conversations/${id}/`,
+    MESSAGES: (id: string) => `/messages/conversations/${id}/messages/`,
+    MARK_READ: (id: string) => `/messages/conversations/${id}/read/`,
+    UNREAD_COUNT: "/messages/unread-count/",
+    SUPPORT: "/messages/support/",
   },
   // Reviews (Mounted at /api/v1/reviews/)
   REVIEWS: {
