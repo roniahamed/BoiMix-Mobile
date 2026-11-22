@@ -1,3 +1,4 @@
+import { Platform } from "react-native";
 import apiClient from "@/lib/api/client";
 import { API_ENDPOINTS } from "@/constants/api";
 
@@ -41,9 +42,13 @@ export const paymentsApi = {
 
   /**
    * Initialize EPS hosted checkout session and receive RedirectURL.
+   * transaction_type_id: 1 = Web, 2 = Android Devices, 3 = IOS Devices.
    */
-  initializeEps: (intentId: string) =>
-    apiClient.post<EPSInitializeResponse>(API_ENDPOINTS.PAYMENTS.EPS_INITIALIZE(intentId)),
+  initializeEps: (intentId: string, transactionTypeId?: number) =>
+    apiClient.post<EPSInitializeResponse>(API_ENDPOINTS.PAYMENTS.EPS_INITIALIZE(intentId), {
+      platform: Platform.OS,
+      transaction_type_id: transactionTypeId || (Platform.OS === "android" ? 2 : Platform.OS === "ios" ? 3 : 1),
+    }),
 
   /**
    * Independently verify payment status directly with EPS gateway.

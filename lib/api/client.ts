@@ -1,4 +1,5 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios";
+import { Platform } from "react-native";
 import { ENV } from "@/constants/env";
 import { API_ENDPOINTS } from "@/constants/api";
 import { secureStorage } from "@/lib/secure-storage";
@@ -37,6 +38,7 @@ const apiClient = axios.create({
   headers: {
     "Content-Type": "application/json",
     Accept: "application/json",
+    "X-Platform": Platform.OS,
   },
 });
 

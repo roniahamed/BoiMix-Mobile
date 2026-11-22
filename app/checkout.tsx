@@ -151,7 +151,35 @@ export default function CheckoutScreen() {
             window.location.href = redirectUrl;
             return;
           } else {
+            // Android Chrome Custom Tab for EPS hosted checkout
             await WebBrowser.openBrowserAsync(redirectUrl);
+
+            // Re-verify payment with EPS gateway immediately upon return
+            if (paymentIntentId) {
+              try {
+                const verifyRes = await paymentsApi.verifyEps(paymentIntentId);
+                if (
+                  verifyRes.data?.verified ||
+                  verifyRes.data?.status === "paid" ||
+                  verifyRes.data?.status === "completed"
+                ) {
+                  Alert.alert(
+                    "পেমেন্ট সফল!",
+                    "EPS গেটওয়ের মাধ্যমে আপনার পেমেন্ট সফলভাবে যাচাই করা হয়েছে।",
+                    [
+                      {
+                        text: "অর্ডার দেখুন",
+                        onPress: () => router.replace("/tabs/orders" as never),
+                      },
+                    ]
+                  );
+                  return;
+                }
+              } catch {
+                // If callback/IPN is still updating in background
+              }
+            }
+
             router.replace("/tabs/orders" as never);
             return;
           }

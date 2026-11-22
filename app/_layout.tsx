@@ -4,6 +4,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { QueryProvider } from "@/providers/QueryProvider";
 import { useAuthEvents } from "@/lib/hooks/useAuthEvents";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 import "../global.css";
 
 if (Platform.OS === "web" && typeof document !== "undefined") {
@@ -12,6 +13,7 @@ if (Platform.OS === "web" && typeof document !== "undefined") {
 
 function AppEventListeners() {
   useAuthEvents();
+  usePushNotifications();
   return null;
 }
 

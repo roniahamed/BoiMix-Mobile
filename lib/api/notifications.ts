@@ -18,4 +18,16 @@ export const notificationsApi = {
 
   getSummary: () =>
     apiClient.get<NotificationSummary>(API_ENDPOINTS.NOTIFICATIONS.SUMMARY),
+
+  registerDeviceToken: (payload: {
+    fcm_token: string;
+    device_name?: string;
+    platform?: "web" | "android" | "ios";
+  }) =>
+    apiClient.post<{ detail: string }>(API_ENDPOINTS.NOTIFICATIONS.DEVICES, payload),
+
+  unregisterDeviceToken: (payload: { fcm_token: string }) =>
+    apiClient.delete<{ detail: string }>(API_ENDPOINTS.NOTIFICATIONS.DEVICES, {
+      data: payload,
+    }),
 };

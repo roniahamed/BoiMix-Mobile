@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { zustandSecureStorage } from "@/lib/secure-storage";
 import { secureStorage, TOKEN_KEYS } from "@/lib/api/client";
+import { unregisterPushTokenAsync } from "@/lib/notifications/push";
 import type { AuthUser } from "@/types/user";
 
 type AuthState = {
@@ -42,6 +43,12 @@ export const useAuthStore = create<AuthState>()(
         })),
 
       clearSession: async () => {
+        // Unregister device push token with backend
+        try {
+          await unregisterPushTokenAsync();
+        } catch {
+          // Best effort
+        }
         // Clear tokens from SecureStore
         await Promise.all([
           secureStorage.removeItem(TOKEN_KEYS.ACCESS),

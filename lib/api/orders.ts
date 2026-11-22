@@ -1,3 +1,4 @@
+import { Platform } from "react-native";
 import apiClient from "@/lib/api/client";
 import { API_ENDPOINTS } from "@/constants/api";
 import type { BookCardBook } from "@/types/book";
@@ -130,6 +131,8 @@ export const ordersApi = {
         thana: payload.delivery_address.thana,
         address: payload.delivery_address.fullAddress,
         paymentMethod: payload.payment_method === "cod" ? "cod" : "eps",
+        platform: Platform.OS,
+        transaction_type_id: Platform.OS === "android" ? 2 : Platform.OS === "ios" ? 3 : 1,
         items: payload.items || [],
         selected_courier: "pathao",
         delivery_option: payload.delivery_method === "home" ? "courier" : "pickup",
