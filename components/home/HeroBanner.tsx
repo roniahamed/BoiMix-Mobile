@@ -1,6 +1,7 @@
 import { View, Text, TouchableOpacity, Dimensions, FlatList } from "react-native";
 import { Image } from "expo-image";
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "expo-router";
 
 const { width } = Dimensions.get("window");
 
@@ -29,6 +30,7 @@ type Props = {
 };
 
 export function HeroBanner({ items, autoScrollInterval = 4000 }: Props) {
+  const router = useRouter();
   const [activeIndex, setActiveIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -70,6 +72,16 @@ export function HeroBanner({ items, autoScrollInterval = 4000 }: Props) {
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
+        getItemLayout={(_, index) => ({
+          length: width,
+          offset: width * index,
+          index,
+        })}
+        onScrollToIndexFailed={(info) => {
+          setTimeout(() => {
+            flatListRef.current?.scrollToIndex({ index: info.index, animated: false });
+          }, 50);
+        }}
         onScrollBeginDrag={handleScrollBegin}
         onMomentumScrollEnd={(e) => {
           const index = Math.round(e.nativeEvent.contentOffset.x / width);
@@ -77,7 +89,19 @@ export function HeroBanner({ items, autoScrollInterval = 4000 }: Props) {
           handleScrollEnd();
         }}
         renderItem={({ item }) => (
-          <TouchableOpacity activeOpacity={0.95} style={{ width }}>
+          <TouchableOpacity
+            activeOpacity={0.9}
+            style={{ width }}
+            onPress={() => {
+              if (item.link) {
+                router.push(item.link as never);
+              } else if (item.id === "2") {
+                router.push({ pathname: "/tabs/explore" as never, params: { mode: "exchange" } });
+              } else {
+                router.push("/tabs/explore" as never);
+              }
+            }}
+          >
             <View style={{ width, height: 180 }} className="relative">
               <Image
                 source={resolveBannerSource(item.imageUrl)}

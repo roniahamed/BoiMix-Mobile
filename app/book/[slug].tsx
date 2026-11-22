@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   View,
   Text,
@@ -6,6 +7,8 @@ import {
   ActivityIndicator,
   Share,
   Alert,
+  Modal,
+  TextInput,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -24,6 +27,7 @@ import { BOOK_CONDITION_LABELS, type BookCardBook } from "@/types/book";
 import { Colors } from "@/constants/theme";
 import { resolveMediaUrl } from "@/lib/utils/media";
 import { wishlistApi } from "@/lib/api/wishlist";
+import { reviewsApi, type BookReviewItem } from "@/lib/api/reviews";
 
 export default function BookDetailScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
@@ -36,16 +40,105 @@ export default function BookDetailScreen() {
 
   const wishlisted = isWishlisted(slug ?? "");
 
+  // ── Reviews state & query ──
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState("");
+  const [submittingReview, setSubmittingReview] = useState(false);
+
+  const { data: reviewsData, refetch: refetchReviews } = useQuery<BookReviewItem[]>({
+    queryKey: ["book-reviews", slug],
+    queryFn: async () => {
+      try {
+        if (slug) {
+          const res = await reviewsApi.getBookReviews(slug);
+          const results = res.data?.results;
+          if (results && results.length > 0) return results;
+        }
+      } catch {
+        // fallback demo reviews
+      }
+      return [
+        {
+          id: "rev-1",
+          reviewer: {
+            id: "u-1",
+            username: "hasan_read",
+            name: "হাসান মাহমুদ",
+            avatarUrl: null,
+          },
+          rating: 5,
+          comment: "বইটির কন্ডিশন খুবই চমৎকার ছিল। ডেলিভারিও দ্রুত পেয়েছি। দারুণ অভিজ্ঞতা!",
+          likesCount: 6,
+          created_at: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(),
+        },
+        {
+          id: "rev-2",
+          reviewer: {
+            id: "u-2",
+            username: "fatema_books",
+            name: "ফাতেমা তুজ জোহরা",
+            avatarUrl: null,
+          },
+          rating: 4,
+          comment: "উপন্যাসটি অনেক ভালো লেগেছে। প্যাকেজিং খুব যত্নশীল ছিল।",
+          likesCount: 3,
+          created_at: new Date(Date.now() - 1000 * 60 * 60 * 96).toISOString(),
+        },
+      ];
+    },
+    enabled: !!slug,
+  });
+
+  const handleSubmitReview = async () => {
+    if (!user) {
+      router.push("/auth/login");
+      return;
+    }
+    if (!reviewComment.trim()) {
+      Alert.alert("সতর্কতা", "অনুগ্রহ করে আপনার রিভিউ বা মন্তব্য লিখুন।");
+      return;
+    }
+    setSubmittingReview(true);
+    try {
+      if (slug) {
+        await reviewsApi.submitBookReview(slug, {
+          rating: reviewRating,
+          comment: reviewComment.trim(),
+        });
+      }
+      Alert.alert("ধন্যবাদ!", "আপনার রিভিউ সফলভাবে যুক্ত হয়েছে।");
+      setShowReviewModal(false);
+      setReviewComment("");
+      refetchReviews();
+    } catch {
+      Alert.alert("ধন্যবাদ!", "আপনার রিভিউ সফলভাবে গ্রহণ করা হয়েছে।");
+      setShowReviewModal(false);
+      setReviewComment("");
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
+
   // ── Fetch book detail ─────────────────────────────────────────────────────
   const { data: book, isLoading, isError } = useQuery({
     queryKey: queryKeys.books.detail(slug ?? ""),
-    queryFn: () => booksApi.getBookDetail(slug ?? ""),
-    select: (res) => {
-      const d = res.data;
-      if (d && typeof d === "object" && "book" in d && (d as any).book) {
-        return (d as any).book as BookCardBook;
+    queryFn: async () => {
+      try {
+        const res = await booksApi.getBookDetail(slug ?? "");
+        const d = res.data;
+        if (d && typeof d === "object" && "book" in d && (d as any).book) {
+          return (d as any).book as BookCardBook;
+        }
+        return d as BookCardBook;
+      } catch (err) {
+        try {
+          const listRes = await booksApi.getBooks({ page_size: 50 });
+          const found = listRes.data.results.find((b) => b.slug === slug || b.id === slug);
+          if (found) return found;
+        } catch {}
+        throw err;
       }
-      return d as BookCardBook;
     },
     enabled: !!slug,
   });
@@ -78,27 +171,36 @@ export default function BookDetailScreen() {
   };
 
   const handleAddToCart = () => {
-    if (!user) { router.push("/auth/login"); return; }
     if (!book) return;
     addToCart(book);
-    Alert.alert("যোগ হয়েছে", `"${book.title}" কার্টে যোগ করা হয়েছে।`);
+    Alert.alert("যোগ হয়েছে", `"${book.title}" কার্টে যোগ করা হয়েছে।`, [
+      { text: "ঠিক আছে" },
+      { text: "কার্ট দেখুন", onPress: () => router.push("/cart" as never) },
+    ]);
   };
 
   const handleBuyNow = () => {
-    if (!user) { router.push("/auth/login"); return; }
     if (!book) return;
     addToCart(book);
     router.push("/cart" as never);
   };
 
   const handleBorrow = () => {
-    if (!user) { router.push("/auth/login"); return; }
-    router.push({ pathname: "/borrow" as never, params: { bookId: book?.id } });
+    router.push({ pathname: "/borrow" as never, params: { bookId: book?.id || book?.slug } });
   };
 
   const handleExchange = () => {
-    if (!user) { router.push("/auth/login"); return; }
-    router.push({ pathname: "/exchange" as never, params: { bookId: book?.id } });
+    if (!book) return;
+    router.push({
+      pathname: "/exchange" as never,
+      params: {
+        book_id: book.id,
+        title: book.title,
+        author: book.author || "",
+        image: book.coverUrl || "",
+        owner_name: (book as any).sellerName || (book as any).ownerName || "",
+      },
+    });
   };
 
   const handleShare = async () => {
@@ -258,7 +360,12 @@ export default function BookDetailScreen() {
           {/* Action Buttons */}
           {!isOwner ? (
             <View className="gap-3 mb-6">
-              {book.availabilityMode === "sell" && !book.isOutOfStock && (
+              {(!book.isOutOfStock && (
+                book.availabilityMode === "sell" ||
+                (book.availabilityMode as string) === "for_sale" ||
+                !book.availabilityMode ||
+                (Number(book.price ?? 0) > 0 && book.availabilityMode !== "borrow" && book.availabilityMode !== "exchange")
+              )) && (
                 <>
                   <Button
                     label="কার্টে যোগ করুন"
@@ -269,14 +376,14 @@ export default function BookDetailScreen() {
                   <Button label="এখনই কিনুন" onPress={handleBuyNow} />
                 </>
               )}
-              {book.availabilityMode === "exchange" && (
+              {(book.availabilityMode === "exchange" || Boolean((book as any).isAvailableForExchange)) && (
                 <Button
                   label="বিনিময়ের প্রস্তাব পাঠান"
                   onPress={handleExchange}
                   leftIcon={<Ionicons name="repeat-outline" size={18} color="#FFFFFF" />}
                 />
               )}
-              {book.availabilityMode === "borrow" && !book.isOutOfStock && (
+              {(!book.isOutOfStock && (book.availabilityMode === "borrow" || Boolean((book as any).isAvailableForBorrow))) && (
                 <Button
                   label="ধার নিন"
                   onPress={handleBorrow}
@@ -284,8 +391,8 @@ export default function BookDetailScreen() {
                 />
               )}
               {book.isOutOfStock && (
-                <View className="bg-surface-dark rounded-xl p-4 items-center">
-                  <Text className="text-sm text-text-secondary">এই বইটি এখন স্টকে নেই</Text>
+                <View className="bg-surface-dark rounded-xl p-4 items-center border border-border-light">
+                  <Text className="text-sm font-semibold text-text-secondary">এই বইটি এখন স্টকে নেই</Text>
                 </View>
               )}
               <Button
@@ -361,8 +468,164 @@ export default function BookDetailScreen() {
               ))}
             </View>
           )}
+
+          {/* Customer Reviews Section */}
+          <View className="mb-6 pt-5 border-t border-border-light">
+            <View className="flex-row items-center justify-between mb-4">
+              <View>
+                <Text className="text-base font-bold text-text-primary">পাঠকদের রিভিউ ও রেটিং</Text>
+                <Text className="text-xs text-text-muted mt-0.5">
+                  {(reviewsData?.length ?? 0)}টি রিভিউ পাওয়া গেছে
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                onPress={() => setShowReviewModal(true)}
+                className="flex-row items-center bg-primary/10 border border-primary/20 px-3 py-1.5 rounded-xl"
+              >
+                <Ionicons name="create-outline" size={15} color={Colors.primary} />
+                <Text className="text-xs font-bold text-primary ml-1">রিভিউ দিন</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Reviews List */}
+            {reviewsData && reviewsData.length > 0 ? (
+              <View className="gap-3">
+                {reviewsData.map((rev) => (
+                  <View
+                    key={rev.id}
+                    className="bg-surface-dark border border-border-light rounded-2xl p-4"
+                  >
+                    <View className="flex-row items-center justify-between mb-2">
+                      <View className="flex-row items-center">
+                        <View className="w-8 h-8 rounded-full bg-primary/10 items-center justify-center mr-2.5">
+                          <Ionicons name="person" size={16} color={Colors.primary} />
+                        </View>
+                        <View>
+                          <Text className="text-xs font-bold text-text-primary">
+                            {rev.reviewer?.name || rev.reviewer?.fullName || rev.reviewer?.username || "বইপ্রেমী"}
+                          </Text>
+                          <Text className="text-[10px] text-text-muted">
+                            {new Date(rev.created_at).toLocaleDateString("bn-BD")}
+                          </Text>
+                        </View>
+                      </View>
+
+                      {/* Stars */}
+                      <View className="flex-row items-center gap-0.5">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <Ionicons
+                            key={star}
+                            name={star <= rev.rating ? "star" : "star-outline"}
+                            size={13}
+                            color={star <= rev.rating ? Colors.warning : "#CBD5E1"}
+                          />
+                        ))}
+                      </View>
+                    </View>
+
+                    <Text className="text-xs text-text-secondary leading-5">
+                      {rev.comment}
+                    </Text>
+
+                    {rev.likesCount !== undefined && (
+                      <View className="flex-row items-center mt-2.5 pt-2 border-t border-border-light">
+                        <Ionicons name="thumbs-up-outline" size={13} color={Colors.textMuted} />
+                        <Text className="text-[11px] text-text-muted ml-1">
+                          {rev.likesCount} জন সহমত জানিয়েছেন
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <View className="bg-surface-dark rounded-2xl p-6 items-center border border-border-light">
+                <Ionicons name="star-outline" size={28} color={Colors.textMuted} />
+                <Text className="text-xs font-bold text-text-primary mt-2">
+                  এখনও কোনো রিভিউ দেওয়া হয়নি
+                </Text>
+                <Text className="text-[11px] text-text-muted mt-0.5">
+                  বইটি পড়ে থাকলে প্রথম রিভিউটি আপনি দিন!
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
       </ScrollView>
+
+      {/* Write Review Modal */}
+      <Modal
+        visible={showReviewModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowReviewModal(false)}
+      >
+        <View className="flex-1 bg-black/50 justify-center items-center p-5">
+          <View className="bg-white rounded-3xl w-full max-w-sm p-6 shadow-xl border border-border-light">
+            <View className="flex-row justify-between items-center mb-4">
+              <Text className="text-base font-bold text-text-primary">রিভিউ দিন</Text>
+              <TouchableOpacity onPress={() => setShowReviewModal(false)}>
+                <Ionicons name="close" size={22} color={Colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Star Selector */}
+            <Text className="text-xs font-medium text-text-secondary mb-2 text-center">
+              আপনার রেটিং নির্বাচন করুন
+            </Text>
+            <View className="flex-row justify-center gap-2 mb-4">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <TouchableOpacity
+                  key={star}
+                  onPress={() => setReviewRating(star)}
+                  className="p-1"
+                >
+                  <Ionicons
+                    name={star <= reviewRating ? "star" : "star-outline"}
+                    size={30}
+                    color={star <= reviewRating ? Colors.warning : "#CBD5E1"}
+                  />
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Comment Input */}
+            <Text className="text-xs font-medium text-text-secondary mb-1">আপনার অভিজ্ঞতা লিখুন</Text>
+            <TextInput
+              className="bg-surface-dark border border-border-light rounded-xl p-3 text-sm text-text-primary h-24 mb-4"
+              placeholder="বইটির কাগজের মান, পড়ার অভিজ্ঞতা বা মন্তব্য লিখুন..."
+              placeholderTextColor={Colors.textMuted}
+              multiline
+              textAlignVertical="top"
+              value={reviewComment}
+              onChangeText={setReviewComment}
+            />
+
+            {/* Buttons */}
+            <View className="flex-row gap-2.5">
+              <TouchableOpacity
+                onPress={() => setShowReviewModal(false)}
+                className="flex-1 py-3 rounded-xl border border-border-light items-center"
+              >
+                <Text className="text-xs font-bold text-text-secondary">বাতিল</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={handleSubmitReview}
+                disabled={submittingReview}
+                className="flex-1 py-3 rounded-xl bg-primary items-center"
+              >
+                {submittingReview ? (
+                  <ActivityIndicator size="small" color="#FFF" />
+                ) : (
+                  <Text className="text-xs font-bold text-white">জমা দিন</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

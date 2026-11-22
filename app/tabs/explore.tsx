@@ -5,7 +5,8 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import { useLocalSearchParams } from "expo-router";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { FlashList } from "@shopify/flash-list";
 import { Ionicons } from "@expo/vector-icons";
@@ -29,6 +30,7 @@ const MODE_CHIPS = [
 
 export default function ExploreScreen() {
   const insets = useSafeAreaInsets();
+  const params = useLocalSearchParams<{ mode?: string; category?: string }>();
   const [filterVisible, setFilterVisible] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -36,9 +38,19 @@ export default function ExploreScreen() {
   const {
     searchQuery, setSearchQuery,
     mode, setMode,
+    setCategories,
     getActiveFilterCount,
     buildQueryParams,
   } = useFilterStore();
+
+  useEffect(() => {
+    if (params.mode) {
+      setMode(params.mode as any);
+    }
+    if (params.category) {
+      setCategories([params.category]);
+    }
+  }, [params.mode, params.category]);
 
   const queryParams = buildQueryParams();
 

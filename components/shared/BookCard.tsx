@@ -131,7 +131,10 @@ export function BookCard({
 
   const handlePress = () => {
     if (onPress) return onPress();
-    router.push(`/book/${book.slug}`);
+    const target = book.slug || book.id;
+    if (target) {
+      router.push(`/book/${target}` as never);
+    }
   };
 
   // ── Horizontal (small) ──────────────────────────────────────────────────

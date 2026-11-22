@@ -146,7 +146,11 @@ export default function MyBooksScreen() {
                 <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
               }
               renderItem={({ item }) => (
-                <View className="bg-white rounded-2xl p-4 mb-3 border border-border-light shadow-sm flex-row items-center">
+                <TouchableOpacity
+                  onPress={() => router.push(`/book/${item.slug || item.id}`)}
+                  activeOpacity={0.8}
+                  className="bg-white rounded-2xl p-4 mb-3 border border-border-light shadow-sm flex-row items-center"
+                >
                   <Image
                     source={{ uri: resolveMediaUrl(item.coverUrl || (item as any).coverImage) }}
                     style={{ width: 56, height: 76, borderRadius: 8 }}
@@ -174,13 +178,10 @@ export default function MyBooksScreen() {
                     </View>
                   </View>
 
-                  <TouchableOpacity
-                    onPress={() => router.push(`/book/${item.slug || item.id}`)}
-                    className="p-2 rounded-xl bg-surface-dark border border-border-light"
-                  >
+                  <View className="p-2 rounded-xl bg-surface-dark border border-border-light">
                     <Ionicons name="eye-outline" size={18} color={Colors.textPrimary} />
-                  </TouchableOpacity>
-                </View>
+                  </View>
+                </TouchableOpacity>
               )}
               ListEmptyComponent={
                 <View className="items-center justify-center py-24 px-6">

@@ -161,18 +161,27 @@ export default function ProfileScreen() {
                 <Text className="text-base font-bold text-primary">{stats.booksInLibrary}</Text>
                 <Text className="text-[11px] text-text-muted mt-0.5">বই তালিকা</Text>
               </TouchableOpacity>
-              <View className="items-center flex-1 border-r border-slate-100">
+              <TouchableOpacity
+                onPress={() => router.push("/tabs/orders")}
+                className="items-center flex-1 border-r border-slate-100"
+              >
                 <Text className="text-base font-bold text-text-primary">{stats.booksBorrowed}</Text>
                 <Text className="text-[11px] text-text-muted mt-0.5">ধার নেওয়া</Text>
-              </View>
-              <View className="items-center flex-1 border-r border-slate-100">
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => router.push("/tabs/orders")}
+                className="items-center flex-1 border-r border-slate-100"
+              >
                 <Text className="text-base font-bold text-text-primary">{stats.successfulExchanges}</Text>
                 <Text className="text-[11px] text-text-muted mt-0.5">বিনিময়</Text>
-              </View>
-              <View className="items-center flex-1">
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => router.push("/profile/my-books")}
+                className="items-center flex-1"
+              >
                 <Text className="text-base font-bold text-text-primary">{stats.booksSold}</Text>
                 <Text className="text-[11px] text-text-muted mt-0.5">বিক্রি</Text>
-              </View>
+              </TouchableOpacity>
             </View>
           </View>
         )}
@@ -294,6 +303,32 @@ export default function ProfileScreen() {
             </View>
             <Text className="flex-1 text-sm font-semibold text-text-primary">
               বিজ্ঞপ্তি ও নোটিফিকেশন
+            </Text>
+            <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => router.push("/settings")}
+            className="flex-row items-center p-3.5 border-b border-slate-100"
+          >
+            <View className="w-9 h-9 rounded-xl bg-slate-100 items-center justify-center mr-3">
+              <Ionicons name="settings-outline" size={18} color={Colors.textPrimary} />
+            </View>
+            <Text className="flex-1 text-sm font-semibold text-text-primary">
+              অ্যাপ সেটিংস ও নোটিফিকেশন
+            </Text>
+            <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => router.push("/support")}
+            className="flex-row items-center p-3.5 border-b border-slate-100"
+          >
+            <View className="w-9 h-9 rounded-xl bg-blue-50 items-center justify-center mr-3">
+              <Ionicons name="help-circle-outline" size={18} color="#2563EB" />
+            </View>
+            <Text className="flex-1 text-sm font-semibold text-text-primary">
+              সাহায্য ও সাপোর্ট (FAQ)
             </Text>
             <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />
           </TouchableOpacity>

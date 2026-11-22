@@ -1,10 +1,10 @@
 import {
   View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  Alert,
-  ActivityIndicator,
+    Text,
+    ScrollView,
+    TouchableOpacity,
+    Alert,
+    ActivityIndicator,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -148,9 +148,8 @@ export default function BorrowScreen() {
               <TouchableOpacity
                 key={opt.id}
                 onPress={() => setDuration(opt.id)}
-                className={`flex-1 p-3 rounded-xl border items-center ${
-                  duration === opt.id ? "border-borrow bg-borrow/5" : "border-border-light bg-surface-dark"
-                }`}
+                className={`flex-1 p-3 rounded-xl border items-center ${duration === opt.id ? "border-borrow bg-borrow/5" : "border-border-light bg-surface-dark"
+                  }`}
               >
                 <Text className={`text-xs font-bold ${duration === opt.id ? "text-borrow" : "text-text-primary"}`}>
                   {opt.label}
@@ -167,9 +166,8 @@ export default function BorrowScreen() {
           <View className="flex-row gap-3">
             <TouchableOpacity
               onPress={() => setDelivery("home")}
-              className={`flex-1 p-3 rounded-xl border flex-row items-center gap-2 ${
-                delivery === "home" ? "border-primary bg-primary/5" : "border-border bg-white"
-              }`}
+              className={`flex-1 p-3 rounded-xl border flex-row items-center gap-2 ${delivery === "home" ? "border-primary bg-primary/5" : "border-border bg-white"
+                }`}
             >
               <Ionicons name="bicycle-outline" size={18} color={delivery === "home" ? Colors.primary : Colors.textMuted} />
               <View>
@@ -182,9 +180,8 @@ export default function BorrowScreen() {
 
             <TouchableOpacity
               onPress={() => setDelivery("pickup")}
-              className={`flex-1 p-3 rounded-xl border flex-row items-center gap-2 ${
-                delivery === "pickup" ? "border-primary bg-primary/5" : "border-border bg-white"
-              }`}
+              className={`flex-1 p-3 rounded-xl border flex-row items-center gap-2 ${delivery === "pickup" ? "border-primary bg-primary/5" : "border-border bg-white"
+                }`}
             >
               <Ionicons name="walk-outline" size={18} color={delivery === "pickup" ? Colors.primary : Colors.textMuted} />
               <View>

@@ -109,4 +109,12 @@ export const API_ENDPOINTS = {
     UNREAD_COUNT: "/unread-count/",
     SUPPORT: "/support/",
   },
+  // Reviews (Mounted at /api/v1/reviews/)
+  REVIEWS: {
+    BOOK_REVIEWS: (slugOrId: string) => `/reviews/books/${slugOrId}/`,
+    SUBMIT_BOOK_REVIEW: (slugOrId: string) => `/reviews/books/${slugOrId}/submit/`,
+    VOTE: (reviewId: string) => `/reviews/${reviewId}/vote/`,
+    USER_REVIEWS: (username: string) => `/reviews/users/${username}/`,
+    SUBMIT_USER_REVIEW: (username: string) => `/reviews/users/${username}/submit/`,
+  },
 } as const;

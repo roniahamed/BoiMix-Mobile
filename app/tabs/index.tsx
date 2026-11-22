@@ -58,26 +58,38 @@ export default function HomeScreen() {
   const { data: trendingData, isLoading: trendingLoading, isError: trendingError, refetch: refetchTrending } = useQuery({
     queryKey: queryKeys.books.trending(),
     queryFn: () => booksApi.getBooks({ ordering: "-rating", page_size: 10 }),
-    select: (res) => res.data.results,
+    select: (res) => res.data?.results ?? (Array.isArray(res.data) ? res.data : []),
   });
 
   const { data: newData, isLoading: newLoading, isError: newError, refetch: refetchNew } = useQuery({
     queryKey: queryKeys.books.newArrivals(),
     queryFn: () => booksApi.getBooks({ ordering: "-created_at", page_size: 10 }),
-    select: (res) => res.data.results,
+    select: (res) => res.data?.results ?? (Array.isArray(res.data) ? res.data : []),
   });
 
   const { data: nearbyData, isLoading: nearbyLoading, isError: nearbyError, refetch: refetchNearby } = useQuery({
     queryKey: userLocation ? queryKeys.books.nearby(userLocation.lat, userLocation.lng, 10) : ["books", "nearby", "none"],
     queryFn: () => userLocation ? booksApi.getNearbyBooks(userLocation.lat, userLocation.lng, 10) : Promise.reject("no-location"),
     enabled: !!userLocation,
-    select: (res) => res.data.results,
+    select: (res) => res.data?.results ?? (Array.isArray(res.data) ? res.data : []),
   });
 
   const { data: libraryData, isLoading: libraryLoading, isError: libraryError, refetch: refetchLibrary } = useQuery({
     queryKey: queryKeys.books.list({ provider_type: "library" }),
     queryFn: () => booksApi.getBooks({ provider_type: "library", page_size: 8 }),
-    select: (res) => res.data.results,
+    select: (res) => res.data?.results ?? (Array.isArray(res.data) ? res.data : []),
+  });
+
+  const { data: categoriesData } = useQuery({
+    queryKey: ["home-categories"],
+    queryFn: async () => {
+      try {
+        const res = await booksApi.getCategories();
+        return res.data?.results?.slice(0, 10) ?? (Array.isArray(res.data) ? (res.data as any).slice(0, 10) : []);
+      } catch {
+        return [];
+      }
+    },
   });
 
   const requestLocation = useCallback(async () => {
@@ -101,6 +113,10 @@ export default function HomeScreen() {
         return;
       }
       router.push("/near-me" as never);
+      return;
+    }
+    if (mode === "sell") {
+      router.push("/tabs/sell" as never);
       return;
     }
     router.push({ pathname: "/tabs/explore" as never, params: { mode } });
@@ -151,6 +167,48 @@ export default function HomeScreen() {
           </TouchableOpacity>
         ))}
       </View>
+
+      {/* Category Chips Bar */}
+      {categoriesData && categoriesData.length > 0 && (
+        <View className="mb-3">
+          <View className="flex-row items-center justify-between px-4 mb-2.5">
+            <Text className="text-sm font-bold text-text-primary">জনপ্রিয় ক্যাটাগরি</Text>
+            <TouchableOpacity onPress={() => router.push("/tabs/explore" as never)}>
+              <Text className="text-xs font-bold text-primary">সব দেখুন</Text>
+            </TouchableOpacity>
+          </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}
+          >
+            {categoriesData.map((cat) => (
+              <TouchableOpacity
+                key={cat.id}
+                onPress={() =>
+                  router.push({
+                    pathname: "/category/[slug]",
+                    params: {
+                      slug: cat.slug,
+                      name: cat.name,
+                      nameBn: cat.nameBn || (cat as any).name_bn || cat.name,
+                    },
+                  })
+                }
+                activeOpacity={0.75}
+                className="flex-row items-center bg-white border border-border-light px-3.5 py-2 rounded-2xl shadow-xs"
+              >
+                <View className="w-6 h-6 rounded-full bg-primary/10 items-center justify-center mr-2">
+                  <Ionicons name="book-outline" size={13} color={Colors.primary} />
+                </View>
+                <Text className="text-xs font-semibold text-text-primary">
+                  {cat.nameBn || (cat as any).name_bn || cat.name}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
 
       <BookHorizontalList title="জনপ্রিয় বই" books={trendingData ?? []} loading={trendingLoading} error={trendingError} onRetry={refetchTrending} seeAllRoute="/tabs/explore" />
       <BookHorizontalList title="নতুন বই" books={newData ?? []} loading={newLoading} error={newError} onRetry={refetchNew} seeAllRoute="/tabs/explore" />
