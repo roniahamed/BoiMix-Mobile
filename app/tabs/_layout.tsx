@@ -41,9 +41,22 @@ export default function TabsLayout() {
           title: "খুঁজুন",
           tabBarIcon: ({ focused, color, size }) => (
             <Ionicons
-              name={focused ? "search" : "search-outline"}
+              name={focused ? "compass" : "compass-outline"}
               size={size || 22}
               color={color as string}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="sell"
+        options={{
+          title: "বিক্রি",
+          tabBarIcon: ({ focused, color, size }) => (
+            <Ionicons
+              name={focused ? "add-circle" : "add-circle-outline"}
+              size={size || 25}
+              color={focused ? Colors.primary : (color as string)}
             />
           ),
         }}

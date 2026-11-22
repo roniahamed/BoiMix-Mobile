@@ -20,10 +20,10 @@ import { queryKeys } from "@/lib/api/query-keys";
 import { useAuthStore } from "@/stores/auth-store";
 import { useCartStore } from "@/stores/cart-store";
 import { useWishlistStore } from "@/stores/wishlist-store";
-import apiClient from "@/lib/api/client";
-import { API_ENDPOINTS } from "@/constants/api";
-import { BOOK_CONDITION_LABELS } from "@/types/book";
+import { BOOK_CONDITION_LABELS, type BookCardBook } from "@/types/book";
 import { Colors } from "@/constants/theme";
+import { resolveMediaUrl } from "@/lib/utils/media";
+import { wishlistApi } from "@/lib/api/wishlist";
 
 export default function BookDetailScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
@@ -40,7 +40,13 @@ export default function BookDetailScreen() {
   const { data: book, isLoading, isError } = useQuery({
     queryKey: queryKeys.books.detail(slug ?? ""),
     queryFn: () => booksApi.getBookDetail(slug ?? ""),
-    select: (res) => res.data,
+    select: (res) => {
+      const d = res.data;
+      if (d && typeof d === "object" && "book" in d && (d as any).book) {
+        return (d as any).book as BookCardBook;
+      }
+      return d as BookCardBook;
+    },
     enabled: !!slug,
   });
 
@@ -54,12 +60,8 @@ export default function BookDetailScreen() {
 
   // ── Wishlist mutation ─────────────────────────────────────────────────────
   const wishlistMutation = useMutation({
-    mutationFn: async (isCurrentlyWishlisted: boolean) => {
-      if (isCurrentlyWishlisted) {
-        await apiClient.delete(API_ENDPOINTS.ME.WISHLIST_ITEM(book!.id));
-      } else {
-        await apiClient.post(API_ENDPOINTS.ME.WISHLIST, { book_id: book!.id });
-      }
+    mutationFn: async (_isCurrentlyWishlisted?: boolean) => {
+      await wishlistApi.toggleWishlist(book!.id);
     },
     onMutate: () => {
       toggleBook(book!.id);
@@ -142,7 +144,7 @@ export default function BookDetailScreen() {
         {/* Cover Image */}
         <View className="relative bg-surface-dark">
           <Image
-            source={{ uri: book.coverUrl || "https://via.placeholder.com/400x300" }}
+            source={{ uri: resolveMediaUrl(book.coverUrl) }}
             style={{ width: "100%", height: 320 }}
             contentFit="cover"
             transition={300}
@@ -228,11 +230,13 @@ export default function BookDetailScreen() {
               <Text className="text-2xl font-bold text-borrow">ধার নিন</Text>
             ) : book.availabilityMode === "exchange" ? (
               <Text className="text-2xl font-bold text-exchange">বিনিময় করুন</Text>
-            ) : book.price ? (
+            ) : Number(book.price ?? 0) > 0 ? (
               <View className="flex-row items-center gap-2">
-                <Text className="text-2xl font-bold text-primary">৳{book.price}</Text>
-                {book.originalPrice && book.originalPrice > book.price && (
-                  <Text className="text-base text-text-muted line-through">৳{book.originalPrice}</Text>
+                <Text className="text-2xl font-bold text-primary">৳{Number(book.price)}</Text>
+                {Number(book.originalPrice ?? 0) > Number(book.price ?? 0) && (
+                  <Text className="text-base text-text-muted line-through">
+                    ৳{Number(book.originalPrice)}
+                  </Text>
                 )}
               </View>
             ) : (
@@ -301,7 +305,7 @@ export default function BookDetailScreen() {
             <View className="mb-5">
               <Text className="text-sm font-semibold text-text-primary mb-2">ট্যাগ</Text>
               <View className="flex-row flex-wrap gap-2">
-                {book.tags.map((tag) => (
+                {book.tags.map((tag: string) => (
                   <View key={tag} className="bg-surface-dark border border-border-light rounded-full px-3 py-1">
                     <Text className="text-xs text-text-secondary">{tag}</Text>
                   </View>

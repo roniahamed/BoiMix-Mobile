@@ -108,11 +108,14 @@ export default function VerifyOtpScreen() {
         mode: params.mode,
       });
 
+      const accessToken = response.data.access_token || response.data.access || "";
+      const refreshToken = response.data.refresh_token || response.data.refresh || "";
+
       if (params.mode === "reset") {
         // For reset mode, redirect to reset-password
         router.replace({
           pathname: "/auth/reset-password",
-          params: { token: response.data.access },
+          params: { token: accessToken },
         });
         return;
       }
@@ -120,8 +123,8 @@ export default function VerifyOtpScreen() {
       // Register mode — save session
       await setSession(
         response.data.user,
-        response.data.access,
-        response.data.refresh,
+        accessToken,
+        refreshToken,
       );
 
       if (!response.data.user.isOnboarded) {

@@ -10,43 +10,63 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // BoiMix Brand Colors
+        // BoiMix Brand Colors (Mirrors web frontend design-system.css)
         primary: {
-          DEFAULT: "#E84C1E",
-          50: "#FEF0EB",
-          100: "#FDD5C8",
-          200: "#FAA892",
-          300: "#F77A5C",
-          400: "#F44D26",
-          500: "#E84C1E",
-          600: "#C43A13",
-          700: "#9A2C0E",
-          800: "#701E09",
-          900: "#461205",
+          DEFAULT: "#0397D3",
+          50: "#E8F7FD",
+          100: "#BAE6FD",
+          200: "#7DD3FC",
+          300: "#38BDF8",
+          400: "#0EA5E9",
+          500: "#0397D3",
+          600: "#027DB0",
+          700: "#0369A1",
+          800: "#075985",
+          900: "#0B2A5B",
         },
         secondary: {
-          DEFAULT: "#1A1A2E",
-          light: "#16213E",
+          DEFAULT: "#0B2A5B",
+          light: "#1E3A8A",
+          dark: "#081B3A",
+        },
+        accent: {
+          DEFAULT: "#FF9900",
+          light: "#FFB84D",
+          dark: "#D98200",
+          soft: "#FFF4E0",
         },
         surface: {
           DEFAULT: "#FFFFFF",
-          dark: "#F5F5F5",
-          card: "#FAFAFA",
+          dark: "#F1F2F4",
+          card: "#FFFFFF",
+          background: "#F1F2F4",
         },
         text: {
-          primary: "#1A1A2E",
-          secondary: "#6B7280",
-          muted: "#9CA3AF",
+          primary: "#1F2933",
+          secondary: "#666666",
+          muted: "#9C9C9C",
           inverse: "#FFFFFF",
         },
         border: {
-          DEFAULT: "#E5E7EB",
-          light: "#F3F4F6",
+          DEFAULT: "#CDCDCD",
+          light: "#E5E5E5",
         },
-        success: "#10B981",
-        warning: "#F59E0B",
-        error: "#EF4444",
-        info: "#3B82F6",
+        success: {
+          DEFAULT: "#33C24D",
+          soft: "#EAF9ED",
+        },
+        warning: {
+          DEFAULT: "#FF9900",
+          soft: "#FFF4E0",
+        },
+        error: {
+          DEFAULT: "#DC2626",
+          soft: "#FEF2F2",
+        },
+        info: {
+          DEFAULT: "#0397D3",
+          soft: "#E8F7FD",
+        },
       },
       fontFamily: {
         sans: ["System"],

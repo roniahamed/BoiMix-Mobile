@@ -280,4 +280,31 @@
 
 ---
 
-*Log last updated: 2026-11-21 (Phase 0)*
+## DEC-013: Strict Vector Icons Only (Zero Emoji Policy)
+
+- **Date**: 2026-11-22
+- **Status**: Accepted
+- **Decided by**: Product & UX Team
+- **Decision**: Strictly prohibit the use of emojis in UI text, buttons, alerts, and components. Use vector icons from `@expo/vector-icons` (`Ionicons`) exclusively.
+- **Rationale**:
+  - Emojis render inconsistently across Android OEM skins (Samsung, Xiaomi, Oppo) and web browsers.
+  - Vector icons provide pixel-perfect scaling, custom theme tinting (`Colors.primary`), and a professional native app feel.
+- **Consequences**:
+  - Automated regex scans enforce 0 emojis across `app/`, `components/`, `lib/`, and `stores/`.
+
+---
+
+## DEC-014: Full Phase 3 & 4 Implementation Architecture
+
+- **Date**: 2026-11-22
+- **Status**: Accepted
+- **Decided by**: Mobile Core Team
+- **Decision**: Implement comprehensive transaction flows (Cart, Checkout, Wishlist, Borrow, Exchange) and user/seller hub (Profile dashboard, Public user profile, Book upload with multi-mode selling/borrowing/exchanging, Notification center).
+- **Rationale**:
+  - Unifies peer-to-peer marketplace capabilities into a single app flow.
+- **Consequences**:
+  - All screens registered and mounted in `app/_layout.tsx` stack.
+
+---
+
+*Log last updated: 2026-11-22 (Phases 0-4 Complete)*

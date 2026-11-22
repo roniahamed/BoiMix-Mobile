@@ -29,7 +29,7 @@ export default function SplashScreen() {
         const token = await secureStorage.getItem(TOKEN_KEYS.ACCESS);
 
         if (!token) {
-          router.replace("/auth/login");
+          router.replace("/tabs");
           return;
         }
 
@@ -42,13 +42,13 @@ export default function SplashScreen() {
           router.replace("/tabs");
         } else {
           await clearSession();
-          router.replace("/auth/login");
+          router.replace("/tabs");
         }
       } catch {
         // 401 handled by interceptor (refresh attempted)
         // If we still get here, tokens are invalid
         await clearSession();
-        router.replace("/auth/login");
+        router.replace("/tabs");
       }
     }
 

@@ -1,9 +1,35 @@
-export const ENV = {
-  apiBaseUrl:
+const getApiBaseUrl = (): string => {
+  if (typeof window !== "undefined" && window.location?.hostname) {
+    const host = window.location.hostname;
+    if (host === "localhost" || host === "127.0.0.1") {
+      return `http://${host}:8080/api/v1`;
+    }
+  }
+  return (
     (process.env.EXPO_PUBLIC_API_BASE_URL as string) ??
-    "http://127.0.0.1:8080/api/v1",
-  wsBaseUrl:
-    (process.env.EXPO_PUBLIC_WS_BASE_URL as string) ?? "ws://127.0.0.1:8001",
+    "http://127.0.0.1:8080/api/v1"
+  );
+};
+
+const getWsBaseUrl = (): string => {
+  if (typeof window !== "undefined" && window.location?.hostname) {
+    const host = window.location.hostname;
+    if (host === "localhost" || host === "127.0.0.1") {
+      return `ws://${host}:8001`;
+    }
+  }
+  return (
+    (process.env.EXPO_PUBLIC_WS_BASE_URL as string) ?? "ws://127.0.0.1:8001"
+  );
+};
+
+export const ENV = {
+  get apiBaseUrl() {
+    return getApiBaseUrl();
+  },
+  get wsBaseUrl() {
+    return getWsBaseUrl();
+  },
   environment:
     (process.env.EXPO_PUBLIC_ENV as string) ?? "development",
   firebase: {

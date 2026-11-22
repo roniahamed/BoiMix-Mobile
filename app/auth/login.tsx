@@ -20,7 +20,7 @@ import { Divider } from "@/components/ui/Divider";
 import { SocialButton } from "@/components/auth/SocialButton";
 import { authApi } from "@/lib/api/auth";
 import { useAuthStore } from "@/stores/auth-store";
-import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
 
 // ─── Validation Schema ────────────────────────────────────────────────────────
 const loginSchema = z.object({
@@ -81,9 +81,11 @@ export default function LoginScreen() {
   const onSubmit = async (data: LoginForm) => {
     try {
       const response = await authApi.login(data);
-      const { access, refresh, user } = response.data;
+      const accessToken = response.data.access_token || response.data.access || "";
+      const refreshToken = response.data.refresh_token || response.data.refresh || "";
+      const user = response.data.user;
 
-      await setSession(user, access, refresh);
+      await setSession(user, accessToken, refreshToken);
 
       // If onboarding not complete, redirect there
       if (!user.isOnboarded) {
@@ -149,14 +151,15 @@ export default function LoginScreen() {
       >
         {/* Logo / Brand */}
         <View
-          style={{ paddingTop: insets.top + 32 }}
-          className="items-center px-6 pb-8"
+          style={{ paddingTop: insets.top + 28 }}
+          className="items-center px-6 pb-6"
         >
-          <View className="w-16 h-16 bg-primary rounded-2xl items-center justify-center mb-4 shadow-md">
-            <Ionicons name="book" size={30} color="#FFFFFF" />
-          </View>
-          <Text className="text-2xl font-bold text-text-primary">BoiMix</Text>
-          <Text className="text-sm text-text-secondary mt-1">
+          <Image
+            source={require("@/assets/images/boimix-logo.png")}
+            style={{ width: 180, height: 56 }}
+            contentFit="contain"
+          />
+          <Text className="text-xs text-text-secondary mt-2">
             আপনার বইয়ের দুনিয়া
           </Text>
         </View>
@@ -246,6 +249,15 @@ export default function LoginScreen() {
             <TouchableOpacity onPress={() => router.push("/auth/register")}>
               <Text className="text-sm text-primary font-semibold">
                 নিবন্ধন করুন
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Guest Link */}
+          <View className="items-center mt-6">
+            <TouchableOpacity onPress={() => router.replace("/tabs")}>
+              <Text className="text-sm text-text-secondary font-medium underline">
+                এখনই সাইন ইন না করে বই ব্রাউজ করুন
               </Text>
             </TouchableOpacity>
           </View>

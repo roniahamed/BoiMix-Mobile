@@ -129,6 +129,7 @@ export default function RegisterScreen() {
         <AuthHeader
           title="নিবন্ধন করুন"
           subtitle="নতুন অ্যাকাউন্ট তৈরি করুন"
+          showLogo
         />
 
         <View className="px-6">

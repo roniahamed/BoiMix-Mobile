@@ -1,5 +1,6 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios";
 import { ENV } from "@/constants/env";
+import { API_ENDPOINTS } from "@/constants/api";
 import { secureStorage } from "@/lib/secure-storage";
 export { secureStorage };
 
@@ -8,6 +9,27 @@ export const TOKEN_KEYS = {
   ACCESS: "auth_access_token",
   REFRESH: "auth_refresh_token",
 } as const;
+
+type AuthEventCallback = () => void;
+class AuthEventEmitter {
+  private listeners: { [event: string]: AuthEventCallback[] } = {};
+
+  on(event: string, callback: AuthEventCallback) {
+    if (!this.listeners[event]) this.listeners[event] = [];
+    this.listeners[event].push(callback);
+    return () => {
+      this.listeners[event] = (this.listeners[event] || []).filter((cb) => cb !== callback);
+    };
+  }
+
+  emit(event: string) {
+    if (this.listeners[event]) {
+      this.listeners[event].forEach((cb) => cb());
+    }
+  }
+}
+
+export const authEventEmitter = new AuthEventEmitter();
 
 const apiClient = axios.create({
   baseURL: ENV.apiBaseUrl,
@@ -19,15 +41,19 @@ const apiClient = axios.create({
 });
 
 // ─── Request Interceptor ─────────────────────────────────────────────────────
-// Attach access token to every request (except auth endpoints)
+// Attach access token to every request (except public auth endpoints)
 apiClient.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
-    const isAuthEndpoint =
+    config.baseURL = ENV.apiBaseUrl;
+    const isPublicAuthEndpoint =
       config.url?.includes("/auth/login") ||
       config.url?.includes("/auth/register") ||
-      config.url?.includes("/auth/token/refresh");
+      config.url?.includes("/auth/otp") ||
+      config.url?.includes("/auth/forgot-password") ||
+      config.url?.includes("/auth/reset-password") ||
+      config.url?.includes("/auth/refresh");
 
-    if (!isAuthEndpoint) {
+    if (!isPublicAuthEndpoint) {
       const token = await secureStorage.getItem(TOKEN_KEYS.ACCESS);
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
@@ -79,30 +105,31 @@ apiClient.interceptors.response.use(
 
       try {
         const refreshToken = await secureStorage.getItem(TOKEN_KEYS.REFRESH);
-        if (!refreshToken) throw new Error("No refresh token");
+        if (!refreshToken) throw new Error("No refresh token available");
 
-        const { data } = await axios.post<{ access: string; refresh: string }>(
-          `${ENV.apiBaseUrl}/auth/token/refresh/`,
-          { refresh: refreshToken },
+        const { data } = await axios.post<{ access_token: string; refresh_token?: string }>(
+          `${ENV.apiBaseUrl}${API_ENDPOINTS.AUTH.REFRESH}`,
+          { refresh_token: refreshToken },
         );
 
-        await secureStorage.setItem(TOKEN_KEYS.ACCESS, data.access);
-        if (data.refresh) {
-          await secureStorage.setItem(TOKEN_KEYS.REFRESH, data.refresh);
+        const newAccessToken = data.access_token;
+        await secureStorage.setItem(TOKEN_KEYS.ACCESS, newAccessToken);
+        if (data.refresh_token) {
+          await secureStorage.setItem(TOKEN_KEYS.REFRESH, data.refresh_token);
         }
 
-        apiClient.defaults.headers.common.Authorization = `Bearer ${data.access}`;
-        processQueue(null, data.access);
+        apiClient.defaults.headers.common.Authorization = `Bearer ${newAccessToken}`;
+        processQueue(null, newAccessToken);
 
-        originalRequest.headers.Authorization = `Bearer ${data.access}`;
+        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
         return apiClient(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError, null);
-        // Clear tokens and trigger logout
-        await secureStorage.removeItem(TOKEN_KEYS.ACCESS);
-        await secureStorage.removeItem(TOKEN_KEYS.REFRESH);
-        // AuthStore.clearSession() will be called by the auth store listener
-        // Emit a global event that the app can listen to
+        // Clear stored tokens on failure
+        await Promise.all([
+          secureStorage.removeItem(TOKEN_KEYS.ACCESS),
+          secureStorage.removeItem(TOKEN_KEYS.REFRESH),
+        ]);
         authEventEmitter.emit("logout");
         return Promise.reject(refreshError);
       } finally {
@@ -114,24 +141,4 @@ apiClient.interceptors.response.use(
   },
 );
 
-// Simple event emitter for auth events
-class SimpleEventEmitter {
-  private listeners: Record<string, Array<() => void>> = {};
-
-  emit(event: string) {
-    this.listeners[event]?.forEach((cb) => cb());
-  }
-
-  on(event: string, callback: () => void) {
-    if (!this.listeners[event]) this.listeners[event] = [];
-    this.listeners[event].push(callback);
-    return () => this.off(event, callback);
-  }
-
-  off(event: string, callback: () => void) {
-    this.listeners[event] = this.listeners[event]?.filter((cb) => cb !== callback) ?? [];
-  }
-}
-
-export const authEventEmitter = new SimpleEventEmitter();
 export default apiClient;

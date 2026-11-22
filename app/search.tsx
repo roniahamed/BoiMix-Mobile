@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
@@ -49,20 +49,28 @@ export default function SearchScreen() {
   const [recentLoaded, setRecentLoaded] = useState(false);
 
   // Load recent searches on mount
-  useState(() => {
+  useEffect(() => {
     loadRecentSearches().then((items) => {
       setRecentSearches(items);
       setRecentLoaded(true);
     });
-  });
+  }, []);
 
   // Suggestions
   const { data: suggestions } = useQuery({
     queryKey: queryKeys.search.suggestions(query),
     queryFn: () =>
-      apiClient.get<string[]>(`/search/suggestions/?q=${encodeURIComponent(query)}`),
+      apiClient.get<{ suggestions: string[] } | string[]>(
+        `/search/suggestions/?q=${encodeURIComponent(query)}`
+      ),
     enabled: query.length >= 2 && !submittedQuery,
-    select: (res) => res.data,
+    select: (res) => {
+      if (Array.isArray(res.data)) return res.data;
+      if (res.data && "suggestions" in res.data && Array.isArray((res.data as any).suggestions)) {
+        return (res.data as any).suggestions as string[];
+      }
+      return [];
+    },
   });
 
   // Search results
@@ -73,10 +81,12 @@ export default function SearchScreen() {
     select: (res) => res.data.results,
   });
 
-  const handleSubmit = async () => {
-    if (!query.trim()) return;
-    setSubmittedQuery(query.trim());
-    await saveRecentSearch(query.trim());
+  const handleSubmit = async (overrideText?: string) => {
+    const q = (overrideText ?? query).trim();
+    if (!q) return;
+    setQuery(q);
+    setSubmittedQuery(q);
+    await saveRecentSearch(q);
     setRecentSearches(await loadRecentSearches());
   };
 
@@ -109,7 +119,7 @@ export default function SearchScreen() {
             placeholderTextColor="#9CA3AF"
             value={query}
             onChangeText={(text) => { setQuery(text); if (submittedQuery) setSubmittedQuery(""); }}
-            onSubmitEditing={handleSubmit}
+            onSubmitEditing={() => handleSubmit()}
             returnKeyType="search"
             autoFocus
             autoCorrect={false}
@@ -129,7 +139,7 @@ export default function SearchScreen() {
           {suggestions!.map((s) => (
             <TouchableOpacity
               key={s}
-              onPress={() => { setQuery(s); handleSubmit(); }}
+              onPress={() => handleSubmit(s)}
               className="px-5 py-3 flex-row items-center gap-3"
             >
               <Ionicons name="search-outline" size={16} color={Colors.textMuted} />

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="100%" height="100%">
+  <defs>
+    <linearGradient id="codGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F59E0B"/>
+      <stop offset="100%" stop-color="#D97706"/>
+    </linearGradient>
+  </defs>
+  <circle cx="60" cy="60" r="54" fill="url(#codGrad)" />
+  <!-- Cash Banknote & Coins Icon -->
+  <g transform="translate(25, 30)">
+    <!-- Banknote -->
+    <rect x="0" y="8" width="68" height="42" rx="6" fill="#FFFFFF" stroke="#B45309" stroke-width="2"/>
+    <rect x="4" y="12" width="60" height="34" rx="4" fill="#FEF3C7" />
+    <circle cx="34" cy="29" r="10" fill="#F59E0B" />
+    <text x="34" y="34" font-size="14" font-weight="900" font-family="system-ui, sans-serif" fill="#FFFFFF" text-anchor="middle">৳</text>
+    <circle cx="12" cy="29" r="3" fill="#D97706" />
+    <circle cx="56" cy="29" r="3" fill="#D97706" />
+    <!-- Coin stacked in front -->
+    <circle cx="56" cy="46" r="12" fill="#FBBF24" stroke="#FFFFFF" stroke-width="2"/>
+    <circle cx="56" cy="46" r="9" fill="#F59E0B" />
+    <text x="56" y="50" font-size="11" font-weight="900" font-family="system-ui, sans-serif" fill="#FFFFFF" text-anchor="middle">৳</text>
+  </g>
+</svg>

@@ -6,11 +6,22 @@ const { width } = Dimensions.get("window");
 
 type BannerItem = {
   id: string;
-  imageUrl: string;
+  imageUrl: any;
   title: string;
   subtitle?: string;
   link?: string;
 };
+
+function resolveBannerSource(source: any) {
+  if (!source) return undefined;
+  if (typeof source === "string") return { uri: source };
+  if (typeof source === "number") return source;
+  if (source.default) {
+    return typeof source.default === "string" ? { uri: source.default } : source.default;
+  }
+  if (source.uri && typeof source.uri === "string") return source;
+  return source;
+}
 
 type Props = {
   items: BannerItem[];
@@ -69,7 +80,7 @@ export function HeroBanner({ items, autoScrollInterval = 4000 }: Props) {
           <TouchableOpacity activeOpacity={0.95} style={{ width }}>
             <View style={{ width, height: 180 }} className="relative">
               <Image
-                source={{ uri: item.imageUrl }}
+                source={resolveBannerSource(item.imageUrl)}
                 style={{ width, height: 180 }}
                 contentFit="cover"
                 transition={300}

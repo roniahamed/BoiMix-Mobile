@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/Button";
 import { useCartStore } from "@/stores/cart-store";
 import { ordersApi } from "@/lib/api/orders";
 import { Colors } from "@/constants/theme";
-import type { BookCardBook } from "@/types/book";
+import { resolveMediaUrl } from "@/lib/utils/media";
 
 const ESTIMATED_DELIVERY_FEE = 60; // 60 BDT standard delivery
 
@@ -40,7 +40,6 @@ export default function CartScreen() {
     removeCoupon,
     getSelectedItems,
     getSubtotal,
-    getTotal,
     getItemCount,
   } = useCartStore();
 
@@ -56,7 +55,7 @@ export default function CartScreen() {
     setCouponError("");
 
     try {
-      const response = await ordersApi.validateCoupon(couponInput.trim());
+      const response = await ordersApi.validateCoupon(couponInput.trim(), subtotal);
       if (response.data.valid) {
         applyCoupon(couponInput.trim(), response.data.discount_amount);
         setCouponInput("");
@@ -182,7 +181,7 @@ export default function CartScreen() {
 
                   {/* Cover */}
                   <Image
-                    source={{ uri: book.coverUrl || "https://via.placeholder.com/60x80" }}
+                    source={{ uri: resolveMediaUrl(book.coverUrl) }}
                     style={{ width: 56, height: 76, borderRadius: 8 }}
                     contentFit="cover"
                   />
@@ -203,7 +202,7 @@ export default function CartScreen() {
 
                     <View className="flex-row items-center justify-between mt-2">
                       <Text className="text-sm font-bold text-primary">
-                        ৳{(book.price ?? 0) * quantity}
+                        ৳{Number(book.price ?? 0) * quantity}
                       </Text>
 
                       {/* Stepper */}
@@ -268,9 +267,8 @@ export default function CartScreen() {
                   <TouchableOpacity
                     onPress={handleApplyCoupon}
                     disabled={couponLoading || !couponInput.trim()}
-                    className={`bg-primary px-4 py-2.5 rounded-xl ${
-                      !couponInput.trim() ? "opacity-50" : ""
-                    }`}
+                    className={`bg-primary px-4 py-2.5 rounded-xl ${!couponInput.trim() ? "opacity-50" : ""
+                      }`}
                   >
                     <Text className="text-white text-xs font-bold">
                       {couponLoading ? "যাচাই..." : "প্রয়োগ"}

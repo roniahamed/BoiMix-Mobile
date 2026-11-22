@@ -10,6 +10,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/theme";
 import type { BookCardBook } from "@/types/book";
 import { BOOK_CONDITION_LABELS } from "@/types/book";
+import { resolveMediaUrl } from "@/lib/utils/media";
 
 const { width } = Dimensions.get("window");
 const GRID_CARD_WIDTH = (width - 48) / 2; // 2-column grid
@@ -68,15 +69,18 @@ function PriceTag({ book }: { book: BookCardBook }) {
   if (book.availabilityMode === "exchange") {
     return <Text className="text-sm font-bold text-exchange">বিনিময়</Text>;
   }
-  if (!book.price) {
+  const price = Number(book.price ?? 0);
+  const origPrice = Number(book.originalPrice ?? 0);
+
+  if (!price) {
     return <Text className="text-sm font-bold text-success">বিনামূল্যে</Text>;
   }
   return (
     <View className="flex-row items-center gap-1">
-      <Text className="text-sm font-bold text-primary">৳{book.price}</Text>
-      {book.originalPrice && book.originalPrice > book.price && (
+      <Text className="text-sm font-bold text-primary">৳{price}</Text>
+      {origPrice > price && (
         <Text className="text-xs text-text-muted line-through">
-          ৳{book.originalPrice}
+          ৳{origPrice}
         </Text>
       )}
     </View>
@@ -140,7 +144,7 @@ export function BookCard({
       >
         <View className="relative mb-2">
           <Image
-            source={{ uri: book.coverUrl || "https://via.placeholder.com/128x180" }}
+            source={{ uri: resolveMediaUrl(book.coverUrl) }}
             style={{ width: 128, height: 180, borderRadius: 12 }}
             contentFit="cover"
             transition={200}
@@ -189,7 +193,7 @@ export function BookCard({
         className="flex-row bg-white border border-border rounded-xl p-3 mb-3 shadow-sm"
       >
         <Image
-          source={{ uri: book.coverUrl || "https://via.placeholder.com/80x112" }}
+          source={{ uri: resolveMediaUrl(book.coverUrl) }}
           style={{ width: 72, height: 100, borderRadius: 8 }}
           contentFit="cover"
           transition={200}
@@ -230,7 +234,7 @@ export function BookCard({
       {/* Cover */}
       <View className="relative mb-2">
         <Image
-          source={{ uri: book.coverUrl || "https://via.placeholder.com/160x220" }}
+          source={{ uri: resolveMediaUrl(book.coverUrl) }}
           style={{ width: "100%", height: GRID_CARD_WIDTH * 1.35, borderRadius: 10 }}
           contentFit="cover"
           transition={200}

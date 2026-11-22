@@ -23,8 +23,9 @@ export type BookCardBook = {
   availabilityMode?: BookAvailabilityMode;
   rating: number;
   reviewCount: number;
-  price?: number;
-  originalPrice?: number;
+  price?: number | string;
+  originalPrice?: number | string;
+  original_price?: number | string;
   distance?: string;
   location?: string;
   condition: BookCondition;
@@ -39,7 +40,8 @@ export type BookCardBook = {
   isInCart?: boolean;
   providerType?: "library" | "user";
   isVerifiedUser?: boolean;
-  exchangePrice?: number;
+  exchangePrice?: number | string;
+  exchange_price?: number | string;
   exchangePreferences?: string[];
   hasPreviewPdf?: boolean;
   previewPdfUrl?: string;

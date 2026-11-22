@@ -28,6 +28,16 @@ export default function RootLayout() {
             <Stack.Screen name="near-me" />
             <Stack.Screen name="search" />
             <Stack.Screen name="book/[slug]" />
+            <Stack.Screen name="cart" />
+            <Stack.Screen name="checkout" />
+            <Stack.Screen name="wishlist" />
+            <Stack.Screen name="borrow/index" />
+            <Stack.Screen name="exchange/index" />
+            <Stack.Screen name="exchange/[id]" />
+            <Stack.Screen name="upload/index" />
+            <Stack.Screen name="user/[username]" />
+            <Stack.Screen name="notifications/index" />
+            <Stack.Screen name="profile/edit" />
           </Stack>
         </QueryProvider>
       </SafeAreaProvider>

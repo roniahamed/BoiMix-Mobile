@@ -1,81 +1,103 @@
 export const API_ENDPOINTS = {
-  // Auth
+  // Auth (Mounted at /api/v1/auth/)
   AUTH: {
-    LOGIN: "/auth/login/",
-    REGISTER: "/auth/register/",
-    VERIFY_OTP: "/auth/verify-otp/",
-    FORGOT_PASSWORD: "/auth/forgot-password/",
-    RESET_PASSWORD: "/auth/reset-password/",
-    GOOGLE: "/auth/google/",
-    REFRESH: "/auth/token/refresh/",
-    LOGOUT: "/auth/logout/",
+    LOGIN: "/auth/login",
+    REGISTER: "/auth/register",
+    VERIFY_OTP: "/auth/otp/verify",
+    SEND_OTP: "/auth/otp/send",
+    FORGOT_PASSWORD: "/auth/forgot-password",
+    RESET_PASSWORD: "/auth/reset-password",
+    GOOGLE: "/auth/google",
+    REFRESH: "/auth/refresh",
+    LOGOUT: "/auth/logout",
+    ME: "/auth/me",
   },
-  // Profile / Me
+  // Profiles (Mounted at /api/v1/profiles/)
+  PROFILES: {
+    ME: "/profiles/me/",
+    PREFERENCES: "/profiles/me/preferences/",
+    FOLLOWERS: "/profiles/me/followers/",
+    FOLLOWING: "/profiles/me/following/",
+    CHECK_USERNAME: "/profiles/check-username/",
+    READING_INTERESTS: "/profiles/reading-interests/",
+    PUBLIC: (username: string) => `/profiles/${username}/`,
+    FOLLOW: (username: string) => `/profiles/${username}/follow/`,
+  },
+  // Me / Cart & Wishlist & Library
   ME: {
-    PROFILE: "/me/profile/",
-    AVATAR: "/me/profile/avatar/",
-    COVER: "/me/profile/cover/",
-    LIBRARY: "/me/library/",
+    PROFILE: "/profiles/me/",
+    LIBRARY: "/books/me/library/",
+    LIBRARY_STATS: "/books/me/library/stats/",
     WISHLIST: "/me/wishlist/",
-    WISHLIST_ITEM: (bookId: string) => `/me/wishlist/items/${bookId}/`,
+    WISHLIST_ITEMS: "/me/wishlist/items/",
+    WISHLIST_ITEM: (listingId: string) => `/me/wishlist/items/${listingId}/`,
+    WISHLIST_TOGGLE: "/me/wishlist/toggle/",
     CART: "/me/cart/",
+    CART_ITEMS: "/me/cart/items/",
     CART_ITEM: (id: string) => `/me/cart/items/${id}/`,
     BORROW_CART: "/me/borrow-cart/",
+    BORROW_CART_ITEMS: "/me/borrow-cart/items/",
     BORROW_CART_ITEM: (bookId: string) => `/me/borrow-cart/items/${bookId}/`,
     BORROW_CART_ELIGIBILITY: "/me/borrow-cart/check-eligibility/",
     ORDERS: "/me/orders/",
-    BORROW_ORDERS: "/me/borrow-orders/",
-    EXCHANGES: "/me/exchanges/",
-    NOTIFICATIONS: "/me/notifications/",
-    NOTIFICATION_READ: (id: string) => `/me/notifications/${id}/read/`,
-    NOTIFICATIONS_READ_ALL: "/me/notifications/read-all/",
-    CONVERSATIONS: "/me/conversations/",
-    CONVERSATION_MESSAGES: (id: string) => `/me/conversations/${id}/messages/`,
-    FOLLOWERS: "/me/followers/",
-    FOLLOWING: "/me/following/",
+    SALES: "/me/sales/",
   },
-  // Books
+  // Books (Mounted at /api/v1/books/)
   BOOKS: {
     LIST: "/books/",
-    DETAIL: (slug: string) => `/books/${slug}/`,
+    DETAIL: (slugOrId: string) => `/books/${slugOrId}/`,
     CREATE: "/books/",
     UPDATE: (id: string) => `/books/${id}/`,
     DELETE: (id: string) => `/books/${id}/`,
     ISBN: (isbn: string) => `/books/isbn/${isbn}/`,
     CATEGORIES: "/books/categories/",
+    CATEGORY_DETAIL: (slugOrId: string) => `/books/categories/${slugOrId}/`,
     NEARBY: "/books/nearby/",
-    TRENDING: "/books/?ordering=-rating",
-    NEW: "/books/?ordering=-created_at",
-    REVIEWS: (slug: string) => `/books/${slug}/reviews/`,
-    QUESTIONS: (slug: string) => `/books/${slug}/questions/`,
-    QUESTION_ANSWERS: (questionId: string) => `/books/questions/${questionId}/answers/`,
+    TRENDING: "/books/trending/",
+    NEW: "/books/new/",
+    TOP_DEALS: "/books/top-deals/",
+    TOP_RATED: "/books/top-rated/",
+    FOR_YOU: "/books/for-you/",
+    FILTERS: "/books/filters/",
+    STATISTICS: "/books/statistics/",
+    QUESTIONS: (slugOrId: string) => `/books/${slugOrId}/questions/`,
   },
-  // Search
+  // Search (Mounted at /api/v1/search/)
   SEARCH: {
     BOOKS: "/search/books/",
     SUGGESTIONS: "/search/suggestions/",
     USERS: "/search/users/",
   },
-  // Location
+  // Location (Mounted at /api/v1/locations/)
   LOCATIONS: {
     SEARCH: "/locations/search/",
     REVERSE: "/locations/reverse/",
   },
-  // Media
+  // Media (Mounted at /api/v1/media/)
   MEDIA: {
     UPLOAD: "/media/uploads/",
   },
-  // Orders
+  // Orders (Mounted at /api/v1/orders/)
   ORDERS: {
-    CREATE: "/orders/",
+    CHECKOUT: "/orders/checkout/",
     DETAIL: (id: string) => `/orders/${id}/`,
-    BORROW_CREATE: "/borrow-orders/",
-    EXCHANGE_CREATE: "/exchanges/",
-    EXCHANGE_DETAIL: (id: string) => `/exchanges/${id}/`,
+    TRACKING: (id: string) => `/orders/${id}/tracking/`,
+    INVOICE: (id: string) => `/orders/${id}/invoice/`,
+    CONFIRM: (id: string) => `/orders/${id}/confirm/`,
+    CANCEL: (id: string) => `/orders/${id}/cancel/`,
+    CANCELLATION_REASONS: "/orders/cancellation-reasons/",
+    DELIVER: (id: string) => `/orders/${id}/deliver/`,
+    RETURN: (id: string) => `/orders/${id}/return/`,
+    COMPLETE: (id: string) => `/orders/${id}/complete/`,
+    CONFIRM_RECEIPT: (id: string) => `/orders/${id}/confirm-receipt/`,
   },
-  // Users (public profiles)
-  USERS: {
-    PROFILE: (username: string) => `/users/${username}/`,
-    FOLLOW: (id: string) => `/users/${id}/follow/`,
+  // Notifications (Mounted at /api/v1/notifications/)
+  NOTIFICATIONS: {
+    LIST: "/notifications/",
+    DETAIL: (id: string) => `/notifications/${id}/`,
+    MARK_READ: (id: string) => `/notifications/${id}/read/`,
+    READ_ALL: "/notifications/read-all/",
+    SUMMARY: "/notifications/summary/",
+    DEVICES: "/notifications/devices/",
   },
 } as const;

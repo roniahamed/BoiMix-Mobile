@@ -26,6 +26,15 @@ export type BookListParams = {
   seller_id?: string;
 };
 
+export type BookDetailResponse = {
+  book: BookCardBook;
+  owner?: any;
+  questions?: any[];
+  qa?: any[];
+  recommended?: BookCardBook[];
+  reviews?: any[];
+};
+
 export const booksApi = {
   getBooks: (params: BookListParams = {}) =>
     apiClient.get<PaginatedResponse<BookCardBook>>(API_ENDPOINTS.BOOKS.LIST, {
@@ -38,10 +47,10 @@ export const booksApi = {
     }),
 
   getBookDetail: (slug: string) =>
-    apiClient.get<BookCardBook>(API_ENDPOINTS.BOOKS.DETAIL(slug)),
+    apiClient.get<BookDetailResponse | BookCardBook>(API_ENDPOINTS.BOOKS.DETAIL(slug)),
 
   getCategories: () =>
-    apiClient.get<BookCategory[]>(API_ENDPOINTS.BOOKS.CATEGORIES),
+    apiClient.get<PaginatedResponse<BookCategory>>(API_ENDPOINTS.BOOKS.CATEGORIES),
 
   getNearbyBooks: (lat: number, lng: number, radius = 10) =>
     apiClient.get<PaginatedResponse<BookCardBook>>(API_ENDPOINTS.BOOKS.NEARBY, {

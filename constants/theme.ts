@@ -1,34 +1,60 @@
-/** BoiMix brand colors (mirrors Tailwind config) */
+/**
+ * BoiMix Brand Colors & Design System
+ * Synchronized with BoiMix Web Frontend & Brand Guidelines
+ */
 export const Colors = {
-  primary: "#E84C1E",
-  primaryLight: "#F77A5C",
-  primaryDark: "#C43A13",
+  // Brand Primary: BoiMix Blue
+  primary: "#0397D3",
+  primaryLight: "#38BDF8",
+  primaryDark: "#027DB0",
+  primarySoft: "#E8F7FD",
 
-  secondary: "#1A1A2E",
-  secondaryLight: "#16213E",
+  // Brand Secondary: BoiMix Navy
+  secondary: "#0B2A5B",
+  secondaryLight: "#1E3A8A",
+  secondaryDark: "#081B3A",
 
+  // Brand Accent: BoiMix Orange
+  accent: "#FF9900",
+  accentLight: "#FFB84D",
+  accentDark: "#D98200",
+  accentSoft: "#FFF4E0",
+
+  // Brand Pink & Green
+  brandPink: "#E91E63",
+  brandGreen: "#33C24D",
+
+  // Surfaces & Backgrounds
   surface: "#FFFFFF",
-  surfaceDark: "#F5F5F5",
-  surfaceCard: "#FAFAFA",
+  surfaceDark: "#F1F2F4",
+  surfaceCard: "#FFFFFF",
+  background: "#F1F2F4",
 
-  textPrimary: "#1A1A2E",
-  textSecondary: "#6B7280",
-  textMuted: "#9CA3AF",
+  // Text Hierarchy
+  textPrimary: "#1F2933",
+  textSecondary: "#666666",
+  textMuted: "#9C9C9C",
   textInverse: "#FFFFFF",
 
-  border: "#E5E7EB",
-  borderLight: "#F3F4F6",
+  // Borders
+  border: "#CDCDCD",
+  borderLight: "#E5E5E5",
 
-  success: "#10B981",
-  warning: "#F59E0B",
-  error: "#EF4444",
-  info: "#3B82F6",
+  // Status Colors
+  success: "#33C24D",
+  successSoft: "#EAF9ED",
+  warning: "#FF9900",
+  warningSoft: "#FFF4E0",
+  error: "#DC2626",
+  errorSoft: "#FEF2F2",
+  info: "#0397D3",
+  infoSoft: "#E8F7FD",
 
-  // Availability mode colors
-  sell: "#10B981",
-  exchange: "#3B82F6",
+  // Book Availability Modes
+  sell: "#33C24D",
+  exchange: "#0397D3",
   borrow: "#8B5CF6",
-  library: "#F59E0B",
+  library: "#FF9900",
 } as const;
 
 export const Spacing = {

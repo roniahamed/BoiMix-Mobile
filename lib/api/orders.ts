@@ -41,12 +41,15 @@ export type DeliveryAddress = {
 export type Order = {
   id: string;
   orderNumber?: string;
+  order_number?: string;
   items: OrderItem[];
   totalAmount: number;
+  total_amount?: number;
   status: OrderStatus;
   deliveryAddress: string;
-  paymentMethod: "cod" | "bkash" | "nagad" | "card";
+  paymentMethod: "cod" | "bkash" | "nagad" | "rocket" | "card";
   createdAt: string;
+  created_at?: string;
 };
 
 export type BorrowOrder = {
@@ -73,9 +76,16 @@ export type ExchangeOrder = {
 };
 
 export type CreateOrderPayload = {
-  cart_item_ids: string[];
+  cart_item_ids?: string[];
+  items?: Array<{
+    id: string;
+    quantity: number;
+    price: number;
+    title?: string;
+    seller?: { id: string };
+  }>;
   delivery_address: DeliveryAddress;
-  payment_method: "cod" | "bkash" | "nagad" | "card";
+  payment_method: "cod" | "bkash" | "nagad" | "rocket" | "card";
   delivery_method: "home" | "pickup";
   coupon_code?: string | null;
 };
@@ -94,26 +104,51 @@ export type CreateExchangePayload = {
 };
 
 export const ordersApi = {
-  // Purchases
+  // Purchases (Mounted at /api/v1/me/orders/ and /api/v1/orders/)
   getOrders: (params: { page?: number; page_size?: number } = {}) =>
     apiClient.get<PaginatedResponse<Order>>(API_ENDPOINTS.ME.ORDERS, { params }),
 
+  getOrderDetail: (id: string) =>
+    apiClient.get<Order>(API_ENDPOINTS.ORDERS.DETAIL(id)),
+
+  getOrderTracking: (id: string) =>
+    apiClient.get(API_ENDPOINTS.ORDERS.TRACKING(id)),
+
   createOrder: (payload: CreateOrderPayload) =>
     apiClient.post<{ id: string; order_number: string; payment_url?: string }>(
-      API_ENDPOINTS.ORDERS.CREATE,
-      payload,
+      API_ENDPOINTS.ORDERS.CHECKOUT,
+      {
+        name: payload.delivery_address.fullName,
+        phone: payload.delivery_address.phone,
+        district: payload.delivery_address.district,
+        thana: payload.delivery_address.thana,
+        address: payload.delivery_address.fullAddress,
+        paymentMethod: payload.payment_method === "cod" ? "cod" : "eps",
+        items: payload.items || [],
+        selected_courier: "pathao",
+        delivery_option: payload.delivery_method === "home" ? "courier" : "pickup",
+        voucher_code: payload.coupon_code || "",
+      },
     ),
 
-  // Borrows
+  cancelOrder: (id: string, reason = "buyer_cancelled") =>
+    apiClient.post(API_ENDPOINTS.ORDERS.CANCEL(id), { reason }),
+
+  // Borrow Cart (Mounted at /api/v1/me/borrow-cart/)
   getBorrowOrders: (params: { page?: number; page_size?: number } = {}) =>
-    apiClient.get<PaginatedResponse<BorrowOrder>>(API_ENDPOINTS.ME.BORROW_ORDERS, {
+    apiClient.get<PaginatedResponse<BorrowOrder>>(API_ENDPOINTS.ME.BORROW_CART, {
       params,
     }),
 
   createBorrowOrder: (payload: CreateBorrowPayload) =>
     apiClient.post<{ id: string; deposit_required: number }>(
-      API_ENDPOINTS.ORDERS.BORROW_CREATE,
-      payload,
+      API_ENDPOINTS.ME.BORROW_CART_ITEMS,
+      {
+        listing_id: payload.book_id,
+        duration: payload.duration,
+        delivery_preference: payload.delivery_preference,
+        notes: payload.notes,
+      },
     ),
 
   checkBorrowEligibility: (bookId: string) =>
@@ -122,22 +157,32 @@ export const ordersApi = {
       { book_id: bookId },
     ),
 
-  // Exchanges
+  // Exchanges (Mounted at /api/v1/messages/exchange-proposals/)
   getExchanges: (params: { page?: number; page_size?: number } = {}) =>
-    apiClient.get<PaginatedResponse<ExchangeOrder>>(API_ENDPOINTS.ME.EXCHANGES, {
+    apiClient.get<PaginatedResponse<ExchangeOrder>>("/messages/conversations/", {
       params,
     }),
 
   createExchange: (payload: CreateExchangePayload) =>
-    apiClient.post<{ id: string }>(API_ENDPOINTS.ORDERS.EXCHANGE_CREATE, payload),
+    apiClient.post<{ id: string }>("/messages/exchange-proposals/", {
+      requested_book_id: payload.requested_book_id,
+      offered_book_id: payload.offered_book_id,
+      note: payload.note,
+    }),
 
-  respondExchange: (id: string, action: "accept" | "reject") =>
-    apiClient.post(`/exchanges/${id}/${action}/`),
+  respondExchange: (id: string, action: "accept" | "reject") => {
+    const act = action === "accept" ? "accept" : "decline";
+    return apiClient.post(`/messages/exchange-proposals/${id}/${act}/`);
+  },
 
-  // Coupons
-  validateCoupon: (code: string) =>
+  // Discounts / Vouchers (Mounted at /api/v1/discounts/public/validate/)
+  validateCoupon: (code: string, subtotal = 0) =>
     apiClient.post<{ valid: boolean; discount_amount: number; message?: string }>(
-      "/coupons/validate/",
-      { code },
+      "/discounts/public/validate/",
+      { code, subtotal: subtotal.toString() },
     ),
+
+  // Courier delivery charge (Mounted at /api/v1/courier/calculate-delivery-charge/)
+  calculateDeliveryCharge: (payload: { recipient_city: string; recipient_zone?: string; weight?: number }) =>
+    apiClient.post<{ delivery_fee: number }>("/courier/calculate-delivery-charge/", payload),
 };

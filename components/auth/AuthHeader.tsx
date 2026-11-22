@@ -1,4 +1,5 @@
 import { View, Text, TouchableOpacity } from "react-native";
+import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -8,9 +9,10 @@ type AuthHeaderProps = {
   title: string;
   subtitle?: string;
   showBack?: boolean;
+  showLogo?: boolean;
 };
 
-export function AuthHeader({ title, subtitle, showBack = true }: AuthHeaderProps) {
+export function AuthHeader({ title, subtitle, showBack = true, showLogo = false }: AuthHeaderProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -24,6 +26,15 @@ export function AuthHeader({ title, subtitle, showBack = true }: AuthHeaderProps
         >
           <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
         </TouchableOpacity>
+      )}
+      {showLogo && (
+        <View className="mb-3">
+          <Image
+            source={require("@/assets/images/boimix-logo.png")}
+            style={{ width: 140, height: 42 }}
+            contentFit="contain"
+          />
+        </View>
       )}
       <Text className="text-2xl font-bold text-text-primary">{title}</Text>
       {subtitle && (

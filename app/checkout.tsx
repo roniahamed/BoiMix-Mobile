@@ -18,16 +18,53 @@ import { useCartStore } from "@/stores/cart-store";
 import { useAuthStore } from "@/stores/auth-store";
 import { ordersApi, type DeliveryAddress } from "@/lib/api/orders";
 import { Colors } from "@/constants/theme";
+import { resolveMediaUrl } from "@/lib/utils/media";
 
-type PaymentMethod = "cod" | "bkash" | "nagad" | "card";
+type PaymentMethod = "cod" | "bkash" | "nagad" | "rocket" | "card";
 type DeliveryMethod = "home" | "pickup";
 
-const PAYMENT_METHODS: { id: PaymentMethod; label: string; icon: keyof typeof Ionicons.glyphMap; description: string }[] = [
-  { id: "cod", label: "ক্যাশ অন ডেলিভারি (COD)", icon: "cash-outline", description: "বই হাতে পেয়ে মূল্য পরিশোধ করুন" },
-  { id: "bkash", label: "বিকাশ (bKash)", icon: "phone-portrait-outline", description: "বিকাশ পেমেন্ট গেটওয়ে" },
-  { id: "nagad", label: "নগদ (Nagad)", icon: "wallet-outline", description: "নগদ অনলাইন পেমেন্ট" },
-  { id: "card", label: "কার্ড / নেট ব্যাংকিং", icon: "card-outline", description: "ভিসা, মাস্টারকার্ড বা ইন্টারনেট ব্যাংকিং" },
-];
+const PAYMENT_METHODS: {
+  id: PaymentMethod;
+  label: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  description: string;
+  image?: any;
+}[] = [
+    {
+      id: "cod",
+      label: "ক্যাশ অন ডেলিভারি (COD)",
+      icon: "cash-outline",
+      description: "বই হাতে পেয়ে মূল্য পরিশোধ করুন",
+      image: require("@/assets/icons/payments/cod.png"),
+    },
+    {
+      id: "bkash",
+      label: "বিকাশ (bKash)",
+      icon: "phone-portrait-outline",
+      description: "বিকাশ ইনস্ট্যান্ট পেমেন্ট (EPS)",
+      image: require("@/assets/icons/payments/bkash.png"),
+    },
+    {
+      id: "nagad",
+      label: "নগদ (Nagad)",
+      icon: "wallet-outline",
+      description: "নগদ অনলাইন পেমেন্ট (EPS)",
+      image: require("@/assets/icons/payments/nagad.png"),
+    },
+    {
+      id: "rocket",
+      label: "রকেট (Rocket)",
+      icon: "phone-portrait-outline",
+      description: "রকেট মোবাইল ব্যাংকিং (EPS)",
+      image: require("@/assets/icons/payments/rocket.png"),
+    },
+    {
+      id: "card",
+      label: "কার্ড / নেট ব্যাংকিং",
+      icon: "card-outline",
+      description: "ভিসা, মাস্টারকার্ড বা ইন্টারনেট ব্যাংকিং (EPS)",
+    },
+  ];
 
 export default function CheckoutScreen() {
   const router = useRouter();
@@ -89,6 +126,13 @@ export default function CheckoutScreen() {
     try {
       await ordersApi.createOrder({
         cart_item_ids: selectedItems.map((i) => i.book.id),
+        items: selectedItems.map((i) => ({
+          id: i.book.id,
+          title: i.book.title,
+          price: Number(i.book.price ?? 0),
+          quantity: i.quantity,
+          seller: { id: i.book.sellerId ?? "boimix" },
+        })),
         delivery_address: address,
         payment_method: paymentMethod,
         delivery_method: deliveryMethod,
@@ -150,39 +194,37 @@ export default function CheckoutScreen() {
           <View className="flex-row gap-3">
             <TouchableOpacity
               onPress={() => setDeliveryMethod("home")}
-              className={`flex-1 p-3 rounded-xl border flex-row items-center gap-2 ${
-                deliveryMethod === "home" ? "border-primary bg-primary/5" : "border-border bg-white"
-              }`}
+              className={`flex-1 p-3 rounded-xl border flex-row items-center gap-2.5 ${deliveryMethod === "home" ? "border-primary bg-primary/5" : "border-border bg-white"
+                }`}
             >
-              <Ionicons
-                name="bicycle-outline"
-                size={20}
-                color={deliveryMethod === "home" ? Colors.primary : Colors.textMuted}
+              <Image
+                source={require("@/assets/icons/courier/pathao-icon.png")}
+                style={{ width: 26, height: 26, borderRadius: 6 }}
+                contentFit="contain"
               />
-              <View>
+              <View className="flex-1">
                 <Text className={`text-xs font-bold ${deliveryMethod === "home" ? "text-primary" : "text-text-primary"}`}>
-                  হোম ডেলিভারি
+                  পাঠাও ডেলিভারি
                 </Text>
-                <Text className="text-xs text-text-muted mt-0.5">৳৬০ ফি</Text>
+                <Text className="text-xs text-text-muted mt-0.5">৳৬০ ফি (২-৩ দিন)</Text>
               </View>
             </TouchableOpacity>
 
             <TouchableOpacity
               onPress={() => setDeliveryMethod("pickup")}
-              className={`flex-1 p-3 rounded-xl border flex-row items-center gap-2 ${
-                deliveryMethod === "pickup" ? "border-primary bg-primary/5" : "border-border bg-white"
-              }`}
+              className={`flex-1 p-3 rounded-xl border flex-row items-center gap-2.5 ${deliveryMethod === "pickup" ? "border-primary bg-primary/5" : "border-border bg-white"
+                }`}
             >
               <Ionicons
-                name="walk-outline"
-                size={20}
+                name="storefront-outline"
+                size={22}
                 color={deliveryMethod === "pickup" ? Colors.primary : Colors.textMuted}
               />
-              <View>
+              <View className="flex-1">
                 <Text className={`text-xs font-bold ${deliveryMethod === "pickup" ? "text-primary" : "text-text-primary"}`}>
                   পিকআপ পয়েন্ট
                 </Text>
-                <Text className="text-xs text-text-muted mt-0.5">বিনামূল্যে</Text>
+                <Text className="text-xs text-text-muted mt-0.5">বিনামূল্যে (সরাসরি)</Text>
               </View>
             </TouchableOpacity>
           </View>
@@ -259,7 +301,7 @@ export default function CheckoutScreen() {
           {selectedItems.map(({ book, quantity }) => (
             <View key={book.id} className="flex-row items-center py-2 border-b border-border-light last:border-b-0">
               <Image
-                source={{ uri: book.coverUrl || "https://via.placeholder.com/40x56" }}
+                source={{ uri: resolveMediaUrl(book.coverUrl) }}
                 style={{ width: 36, height: 48, borderRadius: 6 }}
                 contentFit="cover"
               />
@@ -272,7 +314,7 @@ export default function CheckoutScreen() {
                 </Text>
               </View>
               <Text className="text-xs font-bold text-primary">
-                ৳{(book.price ?? 0) * quantity}
+                ৳{Number(book.price ?? 0) * quantity}
               </Text>
             </View>
           ))}
@@ -289,17 +331,25 @@ export default function CheckoutScreen() {
                   key={pm.id}
                   onPress={() => setPaymentMethod(pm.id)}
                   activeOpacity={0.8}
-                  className={`flex-row items-center p-3 rounded-xl border ${
-                    selected ? "border-primary bg-primary/5" : "border-border-light bg-surface-dark"
-                  }`}
+                  className={`flex-row items-center p-3 rounded-xl border ${selected ? "border-primary bg-primary/5" : "border-border-light bg-surface-dark"
+                    }`}
                 >
-                  <Ionicons
-                    name={pm.icon}
-                    size={22}
-                    color={selected ? Colors.primary : Colors.textSecondary}
-                    className="mr-3"
-                  />
-                  <View className="flex-1 ml-2">
+                  <View className="w-10 h-10 rounded-lg bg-white border border-border-light items-center justify-center mr-3 overflow-hidden">
+                    {pm.image ? (
+                      <Image
+                        source={pm.image}
+                        style={{ width: 28, height: 28 }}
+                        contentFit="contain"
+                      />
+                    ) : (
+                      <Ionicons
+                        name={pm.icon}
+                        size={22}
+                        color={selected ? Colors.primary : Colors.textSecondary}
+                      />
+                    )}
+                  </View>
+                  <View className="flex-1">
                     <Text className={`text-xs font-bold ${selected ? "text-primary" : "text-text-primary"}`}>
                       {pm.label}
                     </Text>

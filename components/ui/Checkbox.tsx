@@ -1,4 +1,5 @@
 import { View, Text, TouchableOpacity } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
 type CheckboxProps = {
   checked: boolean;
@@ -22,7 +23,7 @@ export function Checkbox({ checked, onChange, label, error }: CheckboxProps) {
           `}
         >
           {checked && (
-            <Text className="text-white text-xs font-bold">✓</Text>
+            <Ionicons name="checkmark" size={14} color="#FFF" />
           )}
         </View>
         {label && <View className="flex-1">{label}</View>}

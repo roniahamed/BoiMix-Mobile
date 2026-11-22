@@ -12,12 +12,12 @@ import { useCallback, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import * as Location from "expo-location";
 import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
 
 import { HeroBanner } from "@/components/home/HeroBanner";
 import { BookHorizontalList } from "@/components/home/BookHorizontalList";
 import { booksApi } from "@/lib/api/books";
 import { queryKeys } from "@/lib/api/query-keys";
-import { useAuthStore } from "@/stores/auth-store";
 import { Colors } from "@/constants/theme";
 
 const QUICK_ACTIONS = [
@@ -30,22 +30,27 @@ const QUICK_ACTIONS = [
 const MOCK_BANNERS = [
   {
     id: "1",
-    imageUrl: "https://via.placeholder.com/400x180/E84C1E/FFFFFF?text=BoiMix",
+    imageUrl: require("@/assets/banners/boimix-hero-banner.jpg"),
     title: "বইয়ের দুনিয়ায় আপনাকে স্বাগতম!",
     subtitle: "লক্ষাধিক বই একটি অ্যাপে",
   },
   {
     id: "2",
-    imageUrl: "https://via.placeholder.com/400x180/1A1A2E/FFFFFF?text=Exchange",
+    imageUrl: require("@/assets/banners/exchange-community.png"),
     title: "বই বিনিময় করুন",
-    subtitle: "কাছের পাঠকদের সাথে",
+    subtitle: "কাছের পাঠকদের সাথে সরাসরি",
+  },
+  {
+    id: "3",
+    imageUrl: require("@/assets/banners/book-festival.png"),
+    title: "বইমেলা উৎসব অফার",
+    subtitle: "বিশেষ ছাড়ে সেরা বই সংগ্রহ করুন",
   },
 ];
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const user = useAuthStore((s) => s.user);
   const [refreshing, setRefreshing] = useState(false);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationDenied, setLocationDenied] = useState(false);
@@ -109,9 +114,12 @@ export default function HomeScreen() {
     >
       {/* Header */}
       <View style={{ paddingTop: insets.top + 8 }} className="flex-row items-center justify-between px-4 pb-3 bg-white border-b border-border-light">
-        <View>
-          <Text className="text-xs text-text-secondary">শুভেচ্ছা,</Text>
-          <Text className="text-lg font-bold text-text-primary">{user?.name?.split(" ")[0] ?? "পাঠক"}</Text>
+        <View className="flex-row items-center">
+          <Image
+            source={require("@/assets/images/boimix-logo.png")}
+            style={{ width: 110, height: 34 }}
+            contentFit="contain"
+          />
         </View>
         <View className="flex-row items-center gap-2">
           <TouchableOpacity onPress={() => router.push("/search" as never)} className="w-10 h-10 bg-surface-dark rounded-xl items-center justify-center">
