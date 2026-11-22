@@ -172,20 +172,20 @@ export default function UserPublicProfileScreen() {
               </View>
             </View>
             <Text className="text-xs text-text-muted mt-0.5">@{profile.username}</Text>
-            {Boolean(profile.bio) && (
+            {profile.bio ? (
               <Text className="text-xs text-text-secondary mt-2 leading-5">
                 {profile.bio}
               </Text>
-            )}
+            ) : null}
 
             {/* Meta Row: Location & Join date */}
             <View className="flex-row flex-wrap items-center gap-4 mt-3">
-              {Boolean(profile.location) && (
+              {profile.location ? (
                 <View className="flex-row items-center">
                   <Ionicons name="location-outline" size={14} color={Colors.textMuted} />
                   <Text className="text-xs text-text-muted ml-1">{profile.location}</Text>
                 </View>
-              )}
+              ) : null}
               <View className="flex-row items-center">
                 <Ionicons name="calendar-outline" size={14} color={Colors.textMuted} />
                 <Text className="text-xs text-text-muted ml-1">যুক্ত হয়েছেন {profile.joinedAt}</Text>

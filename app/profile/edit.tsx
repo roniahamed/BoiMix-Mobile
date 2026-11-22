@@ -17,6 +17,7 @@ import { Colors } from "@/constants/theme";
 import { Button } from "@/components/ui/Button";
 import { useAuthStore } from "@/stores/auth-store";
 import { usersApi } from "@/lib/api/users";
+import { queryClient } from "@/providers/QueryProvider";
 
 const READING_GENRES = [
   "উপন্যাস",
@@ -91,19 +92,40 @@ export default function EditProfileScreen() {
 
     setSaving(true);
     try {
-      await usersApi.updateProfile({
-        name,
-        bio,
-        phone,
-        district,
-        area,
-        readingInterests: selectedGenres,
-      });
+      if (avatarUri && !avatarUri.startsWith("http")) {
+        const formData = new FormData();
+        formData.append("full_name", name.trim());
+        formData.append("bio", bio.trim());
+        formData.append("location_city", district.trim());
+        formData.append("location_street", area.trim());
+        formData.append("reading_interests", selectedGenres.join(", "));
+
+        const uriParts = avatarUri.split(".");
+        const ext = uriParts[uriParts.length - 1] || "jpg";
+        formData.append("avatar", {
+          uri: avatarUri,
+          name: `avatar.${ext}`,
+          type: `image/${ext === "png" ? "png" : "jpeg"}`,
+        } as any);
+
+        await usersApi.updateProfile(formData);
+      } else {
+        await usersApi.updateProfile({
+          name: name.trim(),
+          bio: bio.trim(),
+          phone: phone.trim(),
+          district: district.trim(),
+          area: area.trim(),
+          readingInterests: selectedGenres,
+        });
+      }
 
       updateUser({
-        name,
+        name: name.trim(),
         avatarUrl: avatarUri || user?.avatarUrl,
       });
+
+      queryClient.invalidateQueries({ queryKey: ["my-profile-tab"] });
 
       if (Platform.OS === "web") {
         alert("প্রোফাইল সফলভাবে আপডেট করা হয়েছে!");
@@ -114,9 +136,9 @@ export default function EditProfileScreen() {
         ]);
       }
     } catch {
-      // If backend mock/error, update local store gracefully
+      // If error, update local store gracefully
       updateUser({
-        name,
+        name: name.trim(),
         avatarUrl: avatarUri || user?.avatarUrl,
       });
       if (Platform.OS === "web") {

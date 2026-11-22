@@ -174,14 +174,14 @@ export default function ChatDetailScreen() {
           </TouchableOpacity>
         </View>
 
-        {Boolean(username) && (
+        {username ? (
           <TouchableOpacity
             onPress={() => router.push(`/user/${username}`)}
             className="w-8 h-8 rounded-full bg-surface-dark items-center justify-center border border-border-light"
           >
             <Ionicons name="information-circle-outline" size={18} color={Colors.textPrimary} />
           </TouchableOpacity>
-        )}
+        ) : null}
       </View>
 
       {/* Messages List */}

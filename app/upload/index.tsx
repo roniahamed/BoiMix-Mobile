@@ -8,6 +8,7 @@ import {
   Switch,
   Alert,
   Platform,
+  ActivityIndicator,
 } from "react-native";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
@@ -17,6 +18,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/theme";
 import { Button } from "@/components/ui/Button";
 import { booksApi } from "@/lib/api/books";
+import { queryClient } from "@/providers/QueryProvider";
 
 const CATEGORIES = [
   "উপন্যাস",
@@ -32,10 +34,11 @@ const CATEGORIES = [
 ];
 
 const CONDITIONS = [
-  { id: "new", label: "একদম নতুন", desc: "পড়া হয়নি, অক্ষত" },
-  { id: "like_new", label: "নতুনের মতো", desc: "খুব যত্নসহকারে পড়া" },
+  { id: "excellent", label: "নতুনের মতো", desc: "খুব যত্নসহকারে পড়া" },
   { id: "good", label: "ভালো", desc: "সামান্য ব্যবহার চিহ্ন" },
   { id: "fair", label: "চলনসই", desc: "দাগ বা পুরানো পাতা" },
+  { id: "poor", label: "পুরানো", desc: "পাতা ছেঁড়া বা দাগযুক্ত" },
+  { id: "new", label: "একদম নতুন", desc: "পড়া হয়নি, অক্ষত (প্ল্যান প্রয়োজন)" },
 ];
 
 export default function BookUploadScreen() {
@@ -47,10 +50,12 @@ export default function BookUploadScreen() {
   const [galleryImages, setGalleryImages] = useState<string[]>([]);
 
   // Book Basic Info
+  const [isbn, setIsbn] = useState("");
+  const [isbnLoading, setIsbnLoading] = useState(false);
   const [title, setTitle] = useState("");
   const [author, setAuthor] = useState("");
   const [category, setCategory] = useState(CATEGORIES[0]);
-  const [condition, setCondition] = useState("like_new");
+  const [condition, setCondition] = useState("excellent");
   const [language, setLanguage] = useState<"bangla" | "english">("bangla");
   const [publisher, setPublisher] = useState("");
   const [description, setDescription] = useState("");
@@ -74,6 +79,40 @@ export default function BookUploadScreen() {
   const [area, setArea] = useState("ধানমন্ডি");
 
   const [submitting, setSubmitting] = useState(false);
+
+  // ISBN Lookup
+  const handleIsbnLookup = async () => {
+    const cleanIsbn = isbn.trim().replace(/[\s-]/g, "");
+    if (!cleanIsbn) {
+      Alert.alert("সতর্কতা", "সঠিক ISBN নম্বর লিখুন (১০ বা ১৩ ডিজিট)।");
+      return;
+    }
+    setIsbnLoading(true);
+    try {
+      const res = await booksApi.getByISBN(cleanIsbn);
+      const data = res.data as any;
+      if (data) {
+        if (data.title) setTitle(data.title);
+        if (data.author) setAuthor(data.author);
+        if (data.publisher) setPublisher(data.publisher);
+        const cat = data.category || data.genre;
+        if (cat && CATEGORIES.includes(cat)) {
+          setCategory(cat);
+        }
+        const img = data.coverImage || data.cover_image_url || data.coverUrl;
+        if (img && !coverImage) {
+          setCoverImage(img);
+        }
+        Alert.alert("সফল", "বইয়ের বিবরণ ডাটাবেজ থেকে পাওয়া গেছে!");
+      } else {
+        Alert.alert("তথ্য নেই", "এই ISBN নম্বরের বই পাওয়া যায়নি। আপনি ম্যানুয়ালি তথ্য পূরণ করতে পারেন।");
+      }
+    } catch {
+      Alert.alert("তথ্য নেই", "এই ISBN নম্বরের বই ডাটাবেজে পাওয়া যায়নি। আপনি নিজে তথ্য পূরণ করুন।");
+    } finally {
+      setIsbnLoading(false);
+    }
+  };
 
   // Pick cover photo
   const handlePickCover = async () => {
@@ -143,43 +182,67 @@ export default function BookUploadScreen() {
     setSubmitting(true);
     try {
       const formData = new FormData();
-      formData.append("title", title);
-      formData.append("author", author);
-      formData.append("category", category);
+      formData.append("title", title.trim());
+      formData.append("author", author.trim());
+      if (publisher.trim()) formData.append("publisher", publisher.trim());
+      formData.append("genre", category);
       formData.append("condition", condition);
       formData.append("language", language);
-      formData.append("publisher", publisher);
-      formData.append("description", description);
-      formData.append("district", district);
-      formData.append("area", area);
+      if (isbn.trim()) formData.append("isbn", isbn.trim().replace(/[\s-]/g, ""));
+      if (description.trim()) formData.append("description", description.trim());
 
+      // Availability mode & Pricing
       if (forSale) {
-        formData.append("is_available_for_sale", "true");
-        formData.append("price", salePrice);
-        if (originalPrice) formData.append("original_price", originalPrice);
-        formData.append("is_negotiable", isNegotiable ? "true" : "false");
-      }
-      if (forBorrow) {
-        formData.append("is_available_for_borrow", "true");
-        formData.append("borrow_fee", borrowFee);
-        formData.append("borrow_deposit", borrowDeposit);
-        formData.append("max_borrow_duration", borrowDuration);
-      }
-      if (forExchange) {
-        formData.append("is_available_for_exchange", "true");
-        formData.append("exchange_preferences", exchangeNote);
+        formData.append("availabilityMode", "sell");
+        formData.append("sellPrice", salePrice);
+        if (originalPrice) formData.append("originalPrice", originalPrice);
+        formData.append("sellQuantity", "1");
+      } else if (forBorrow) {
+        formData.append("availabilityMode", "borrow");
+        formData.append("borrowFee", borrowFee);
+        formData.append("deposit", borrowDeposit);
+        formData.append("borrowDuration", borrowDuration === "1_month" ? "30" : borrowDuration === "2_weeks" ? "14" : "7");
+        formData.append("borrowQuantity", "1");
+      } else if (forExchange) {
+        formData.append("availabilityMode", "exchange");
+        formData.append("exchangePreference", exchangeNote.trim() || "যেকোনো ভালো বই");
+        formData.append("exchangeQuantity", "1");
       }
 
-      // Append cover
+      // Location
+      formData.append("locationType", "custom");
+      formData.append("locationAddress", `${area}, ${district}`);
+      formData.append("locationLat", "23.8103");
+      formData.append("locationLng", "90.4125");
+
+      // Cover Image (frontCover)
       const uriParts = coverImage.split(".");
-      const fileType = uriParts[uriParts.length - 1];
-      formData.append("cover_image", {
+      const fileType = uriParts[uriParts.length - 1] || "jpeg";
+      formData.append("frontCover", {
         uri: coverImage,
-        name: `cover.${fileType}`,
-        type: `image/${fileType}`,
+        name: `front-cover.${fileType}`,
+        type: `image/${fileType === "jpg" ? "jpeg" : fileType}`,
       } as any);
 
+      // Gallery Images (backCover, insidePages, tocImage)
+      const gallerySlots = ["backCover", "insidePages", "tocImage"];
+      galleryImages.forEach((imgUri, index) => {
+        if (index < gallerySlots.length) {
+          const parts = imgUri.split(".");
+          const ext = parts[parts.length - 1] || "jpeg";
+          formData.append(gallerySlots[index], {
+            uri: imgUri,
+            name: `${gallerySlots[index]}.${ext}`,
+            type: `image/${ext === "jpg" ? "jpeg" : ext}`,
+          } as any);
+        }
+      });
+
       await booksApi.uploadBook(formData);
+
+      queryClient.invalidateQueries({ queryKey: ["my-listed-books"] });
+      queryClient.invalidateQueries({ queryKey: ["books"] });
+      queryClient.invalidateQueries({ queryKey: ["my-profile-tab"] });
 
       if (Platform.OS === "web") {
         alert("আপনার বইটি BoiMix প্ল্যাটফর্মে সফলভাবে যুক্ত করা হয়েছে।");
@@ -191,16 +254,26 @@ export default function BookUploadScreen() {
           [{ text: "ঠিক আছে", onPress: () => router.replace("/tabs/profile") }]
         );
       }
-    } catch {
+    } catch (err: any) {
+      const serverErr =
+        err?.response?.data?.condition ||
+        err?.response?.data?.genre ||
+        err?.response?.data?.title ||
+        err?.response?.data?.isbn ||
+        err?.response?.data?.detail ||
+        err?.response?.data?.message ||
+        "বই প্রকাশ করা যায়নি। সব তথ্য সঠিক আছে কি না যাচাই করুন।";
+
+      const displayMessage = Array.isArray(serverErr)
+        ? serverErr.join(" ")
+        : typeof serverErr === "object"
+        ? Object.values(serverErr).flat().join(" ")
+        : serverErr;
+
       if (Platform.OS === "web") {
-        alert("আপনার বইটি প্ল্যাটফর্মে সফলভাবে যুক্ত হয়েছে।");
-        router.replace("/tabs/profile");
+        alert(displayMessage);
       } else {
-        Alert.alert(
-          "সফল প্রকাশনা!",
-          "আপনার বইটি প্ল্যাটফর্মে সফলভাবে যুক্ত হয়েছে।",
-          [{ text: "ঠিক আছে", onPress: () => router.replace("/tabs/profile") }]
-        );
+        Alert.alert("ত্রুটি", displayMessage);
       }
     } finally {
       setSubmitting(false);
@@ -294,6 +367,43 @@ export default function BookUploadScreen() {
           ২. বইয়ের মৌলিক বিবরণ
         </Text>
         <View className="bg-white rounded-2xl p-4 border border-border mb-5">
+          {/* ISBN Fast Autofill */}
+          <Text className="text-xs font-bold text-text-secondary uppercase mb-1">
+            ISBN নম্বর (স্বয়ংক্রিয় তথ্য পূরণের জন্য)
+          </Text>
+          <View className="flex-row items-center gap-2 mb-3.5">
+            <TextInput
+              value={isbn}
+              onChangeText={setIsbn}
+              placeholder="যেমন: 9789849123456"
+              keyboardType="numeric"
+              placeholderTextColor={Colors.textMuted}
+              className="flex-1 border border-border rounded-xl px-3.5 py-2.5 text-sm text-text-primary"
+            />
+            <TouchableOpacity
+              onPress={handleIsbnLookup}
+              disabled={isbnLoading || !isbn.trim()}
+              className={`px-3.5 py-2.5 rounded-xl flex-row items-center ${
+                isbn.trim() && !isbnLoading ? "bg-primary" : "bg-slate-200"
+              }`}
+            >
+              {isbnLoading ? (
+                <ActivityIndicator size="small" color="#FFF" />
+              ) : (
+                <>
+                  <Ionicons name="search" size={14} color={isbn.trim() ? "#FFF" : Colors.textMuted} />
+                  <Text
+                    className={`text-xs font-bold ml-1 ${
+                      isbn.trim() ? "text-white" : "text-text-muted"
+                    }`}
+                  >
+                    খুঁজুন
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+
           <Text className="text-xs font-bold text-text-secondary uppercase mb-1">
             বইয়ের নাম *
           </Text>

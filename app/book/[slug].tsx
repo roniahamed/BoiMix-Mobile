@@ -434,7 +434,7 @@ export default function BookDetailScreen() {
         </View>
 
         {/* Thumbnails row if multiple images */}
-        {allImages.length > 1 && (
+        {allImages.length > 1 ? (
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -466,7 +466,7 @@ export default function BookDetailScreen() {
               );
             })}
           </ScrollView>
-        )}
+        ) : null}
 
         <View className="p-5">
           {/* Badges row */}
@@ -506,13 +506,13 @@ export default function BookDetailScreen() {
           </TouchableOpacity>
 
           {/* Rating */}
-          {book.rating > 0 && (
+          {book.rating > 0 ? (
             <View className="flex-row items-center gap-1.5 mt-2">
               <Ionicons name="star" size={16} color={Colors.warning} />
               <Text className="text-sm font-bold text-text-primary">{book.rating.toFixed(1)}</Text>
               <Text className="text-sm text-text-muted">({book.reviewCount} রিভিউ)</Text>
             </View>
-          )}
+          ) : null}
 
           {/* Price */}
           <View className="mt-3 mb-5 py-2 border-y border-border-light">
@@ -523,11 +523,11 @@ export default function BookDetailScreen() {
             ) : Number(book.price ?? 0) > 0 ? (
               <View className="flex-row items-center gap-2">
                 <Text className="text-2xl font-bold text-primary">৳{Number(book.price)}</Text>
-                {Number(book.originalPrice ?? 0) > Number(book.price ?? 0) && (
+                {Number(book.originalPrice ?? 0) > Number(book.price ?? 0) ? (
                   <Text className="text-base text-text-muted line-through">
                     ৳{Number(book.originalPrice)}
                   </Text>
-                )}
+                ) : null}
               </View>
             ) : (
               <Text className="text-2xl font-bold text-success">বিনামূল্যে</Text>
@@ -535,15 +535,15 @@ export default function BookDetailScreen() {
           </View>
 
           {/* Location */}
-          {Boolean(book.location) && (
+          {book.location ? (
             <View className="flex-row items-center gap-1.5 mb-4">
               <Ionicons name="location-outline" size={16} color={Colors.textSecondary} />
               <Text className="text-sm text-text-secondary">{book.location}</Text>
-              {Boolean(book.distance) && (
+              {book.distance ? (
                 <Text className="text-sm text-text-muted">({book.distance})</Text>
-              )}
+              ) : null}
             </View>
-          )}
+          ) : null}
 
           {/* Action Buttons */}
           {!isOwner ? (
@@ -553,7 +553,7 @@ export default function BookDetailScreen() {
                 (book.availabilityMode as string) === "for_sale" ||
                 !book.availabilityMode ||
                 (Number(book.price ?? 0) > 0 && book.availabilityMode !== "borrow" && book.availabilityMode !== "exchange")
-              )) && (
+              )) ? (
                 <>
                   <Button
                     label="কার্টে যোগ করুন"
@@ -563,26 +563,26 @@ export default function BookDetailScreen() {
                   />
                   <Button label="এখনই কিনুন" onPress={handleBuyNow} />
                 </>
-              )}
-              {(book.availabilityMode === "exchange" || Boolean((book as any).isAvailableForExchange)) && (
+              ) : null}
+              {(book.availabilityMode === "exchange" || Boolean((book as any).isAvailableForExchange)) ? (
                 <Button
                   label="বিনিময়ের প্রস্তাব পাঠান"
                   onPress={handleExchange}
                   leftIcon={<Ionicons name="repeat-outline" size={18} color="#FFFFFF" />}
                 />
-              )}
-              {(!book.isOutOfStock && (book.availabilityMode === "borrow" || Boolean((book as any).isAvailableForBorrow))) && (
+              ) : null}
+              {(!book.isOutOfStock && (book.availabilityMode === "borrow" || Boolean((book as any).isAvailableForBorrow))) ? (
                 <Button
                   label="ধার নিন"
                   onPress={handleBorrow}
                   leftIcon={<Ionicons name="book-outline" size={18} color="#FFFFFF" />}
                 />
-              )}
-              {book.isOutOfStock && (
+              ) : null}
+              {book.isOutOfStock ? (
                 <View className="bg-surface-dark rounded-xl p-4 items-center border border-border-light">
                   <Text className="text-sm font-semibold text-text-secondary">এই বইটি এখন স্টকে নেই</Text>
                 </View>
-              )}
+              ) : null}
               <Button
                 label={creatingChat ? "মেসেজ রুম প্রস্তুত হচ্ছে..." : "মালিককে মেসেজ দিন"}
                 onPress={handleMessageOwner}
@@ -603,7 +603,7 @@ export default function BookDetailScreen() {
           )}
 
           {/* Tags */}
-          {book.tags?.length > 0 && (
+          {Array.isArray(book.tags) && book.tags.length > 0 ? (
             <View className="mb-5">
               <Text className="text-sm font-semibold text-text-primary mb-2">ট্যাগ</Text>
               <View className="flex-row flex-wrap gap-2">
@@ -614,10 +614,10 @@ export default function BookDetailScreen() {
                 ))}
               </View>
             </View>
-          )}
+          ) : null}
 
           {/* PDF Preview */}
-          {(book.hasPreviewPdf || (book as any).preview_pdf_url || book.previewPdfUrl) && (
+          {Boolean(book.hasPreviewPdf || (book as any).preview_pdf_url || book.previewPdfUrl) ? (
             <TouchableOpacity
               className="flex-row items-center gap-3 bg-info/10 border border-info rounded-xl p-4 mb-5"
               onPress={handleOpenPdfPreview}
@@ -631,10 +631,10 @@ export default function BookDetailScreen() {
               </View>
               <Ionicons name="chevron-forward" size={18} color={Colors.info} />
             </TouchableOpacity>
-          )}
+          ) : null}
 
           {/* Seller / Owner Info Card */}
-          {((book as any).owner || book.sellerId) && (
+          {Boolean((book as any).owner || book.sellerId) ? (
             <View className="mb-5 p-4 rounded-2xl bg-surface-dark border border-border-light">
               <View className="flex-row items-center justify-between">
                 <View className="flex-row items-center flex-1 mr-2">
@@ -650,7 +650,7 @@ export default function BookDetailScreen() {
                     </Text>
                   </View>
                 </View>
-                {!isOwner && (
+                {!isOwner ? (
                   <TouchableOpacity
                     onPress={handleMessageOwner}
                     disabled={creatingChat}
@@ -659,13 +659,13 @@ export default function BookDetailScreen() {
                     <Ionicons name="chatbubble-ellipses-outline" size={15} color="#FFFFFF" />
                     <Text className="text-xs font-bold text-white ml-1">মেসেজ</Text>
                   </TouchableOpacity>
-                )}
+                ) : null}
               </View>
             </View>
-          )}
+          ) : null}
 
           {/* More from Seller */}
-          {sellerBooks && sellerBooks.length > 0 && (
+          {sellerBooks && sellerBooks.length > 0 ? (
             <View className="mb-5">
               <Text className="text-sm font-semibold text-text-primary mb-3">
                 এই বিক্রেতার আরো বই
@@ -674,7 +674,7 @@ export default function BookDetailScreen() {
                 <BookCard key={b.id} book={b} variant="list" />
               ))}
             </View>
-          )}
+          ) : null}
 
           {/* Customer Reviews Section */}
           <View className="mb-6 pt-5 border-t border-border-light">

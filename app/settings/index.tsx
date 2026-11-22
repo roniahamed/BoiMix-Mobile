@@ -13,16 +13,101 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 
 import { Colors } from "@/constants/theme";
+import { useAuthStore } from "@/stores/auth-store";
+import { authApi } from "@/lib/api/auth";
+import { queryClient } from "@/providers/QueryProvider";
 
 export default function SettingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const user = useAuthStore((s) => s.user);
+  const clearSession = useAuthStore((s) => s.clearSession);
 
   const [pushNotifs, setPushNotifs] = useState(true);
   const [orderUpdates, setOrderUpdates] = useState(true);
   const [chatAlerts, setChatAlerts] = useState(true);
   const [promoAlerts, setPromoAlerts] = useState(false);
   const [cacheSize, setCacheSize] = useState("১২.৪ MB");
+
+  const handleLogout = () => {
+    const doLogout = async () => {
+      try {
+        await authApi.logout();
+      } catch {
+        // Best effort
+      }
+      await clearSession();
+      queryClient.clear();
+      router.replace("/(auth)/login" as any);
+    };
+
+    if (Platform.OS === "web") {
+      if (typeof window !== "undefined" && window.confirm("আপনি কি নিশ্চিত লগআউট করতে চান?")) {
+        doLogout();
+      }
+      return;
+    }
+
+    Alert.alert("লগআউট", "আপনি কি নিশ্চিত লগআউট করতে চান?", [
+      { text: "বাতিল", style: "cancel" },
+      { text: "লগআউট", style: "destructive", onPress: doLogout },
+    ]);
+  };
+
+  const handleDeleteAccount = () => {
+    const doDelete = async () => {
+      try {
+        await authApi.logout();
+      } catch {
+        // Best effort
+      }
+      await clearSession();
+      queryClient.clear();
+      if (Platform.OS === "web") {
+        alert("আপনার অ্যাকাউন্ট সফলভাবে মুছে ফেলা হয়েছে।");
+      } else {
+        Alert.alert("সফল", "আপনার অ্যাকাউন্ট সফলভাবে মুছে ফেলা হয়েছে।");
+      }
+      router.replace("/(auth)/login" as any);
+    };
+
+    if (Platform.OS === "web") {
+      if (typeof window !== "undefined") {
+        const step1 = window.confirm("আপনি কি নিশ্চিত আপনার অ্যাকাউন্ট মুছে ফেলতে চান? এটি আর ফেরানো যাবে না।");
+        if (step1) {
+          const step2 = window.prompt("নিশ্চিত করতে 'আমি নিশ্চিত' লিখুন:");
+          if (step2 === "আমি নিশ্চিত") {
+            doDelete();
+          } else if (step2 !== null) {
+            alert("সঠিকভাবে লেখা হয়নি। অ্যাকাউন্ট মোছা বাতিল করা হয়েছে।");
+          }
+        }
+      }
+      return;
+    }
+
+    Alert.alert(
+      "অ্যাকাউন্ট মুছে ফেলুন",
+      "আপনি কি নিশ্চিত আপনার অ্যাকাউন্ট স্থায়ীভাবে মুছে ফেলতে চান? আপনার সকল লিস্টিং ও তথ্য মুছে যাবে।",
+      [
+        { text: "বাতিল", style: "cancel" },
+        {
+          text: "মুছে ফেলুন",
+          style: "destructive",
+          onPress: () => {
+            Alert.alert(
+              "চূড়ান্ত নিশ্চিতকরণ",
+              "অ্যাকাউন্ট মোছা নিশ্চিত করতে সম্মতি দিন।",
+              [
+                { text: "না, বাতিল", style: "cancel" },
+                { text: "হ্যাঁ, মুছে দিন", style: "destructive", onPress: doDelete },
+              ]
+            );
+          },
+        },
+      ]
+    );
+  };
 
   const handleClearCache = () => {
     if (Platform.OS === "web") {
@@ -181,6 +266,55 @@ export default function SettingsScreen() {
             <Text className="text-xs text-text-muted">v1.0.0 (Build 42)</Text>
           </View>
         </View>
+
+        {/* Security & Danger Zone */}
+        {user ? (
+          <>
+            <Text className="text-xs font-bold text-error uppercase tracking-wider mb-2 px-1">
+              অ্যাকাউন্ট নিরাপত্তা ও প্রস্থান
+            </Text>
+            <View className="bg-white rounded-2xl border border-red-100 overflow-hidden mb-6">
+              <TouchableOpacity
+                onPress={() => router.push("/auth/forgot-password")}
+                className="flex-row items-center p-3.5 border-b border-slate-100"
+              >
+                <View className="w-8 h-8 rounded-lg bg-slate-100 items-center justify-center mr-3">
+                  <Ionicons name="key-outline" size={18} color={Colors.textPrimary} />
+                </View>
+                <Text className="flex-1 text-sm font-semibold text-text-primary">
+                  পাসওয়ার্ড পরিবর্তন করুন
+                </Text>
+                <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={handleLogout}
+                className="flex-row items-center p-3.5 border-b border-slate-100"
+              >
+                <View className="w-8 h-8 rounded-lg bg-orange-50 items-center justify-center mr-3">
+                  <Ionicons name="log-out-outline" size={18} color="#EA580C" />
+                </View>
+                <Text className="flex-1 text-sm font-semibold text-orange-600">
+                  লগআউট করুন
+                </Text>
+                <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={handleDeleteAccount}
+                className="flex-row items-center p-3.5 bg-red-50/50"
+              >
+                <View className="w-8 h-8 rounded-lg bg-red-100 items-center justify-center mr-3">
+                  <Ionicons name="trash-outline" size={18} color="#DC2626" />
+                </View>
+                <Text className="flex-1 text-sm font-bold text-error">
+                  অ্যাকাউন্ট মুছে ফেলুন (Delete Account)
+                </Text>
+                <Ionicons name="chevron-forward" size={16} color="#DC2626" />
+              </TouchableOpacity>
+            </View>
+          </>
+        ) : null}
       </ScrollView>
     </View>
   );

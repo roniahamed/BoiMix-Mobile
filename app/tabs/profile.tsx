@@ -59,12 +59,12 @@ export default function ProfileScreen() {
   };
 
   const stats = profile?.stats || {
-    booksInLibrary: 8,
-    successfulExchanges: 4,
-    booksBorrowed: 3,
-    booksSold: 6,
-    followers: 18,
-    following: 12,
+    booksInLibrary: (profile as any)?.booksCount ?? (profile as any)?.total_books ?? 0,
+    successfulExchanges: (profile as any)?.exchangesCount ?? 0,
+    booksBorrowed: (profile as any)?.borrowedCount ?? 0,
+    booksSold: (profile as any)?.soldCount ?? 0,
+    followers: (profile as any)?.followersCount ?? 0,
+    following: (profile as any)?.followingCount ?? 0,
   };
 
   return (
