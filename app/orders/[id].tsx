@@ -349,7 +349,7 @@ export default function OrderTrackingDetailScreen() {
               <View className="flex-1 ml-2">
                 <Text className="text-xs font-bold text-text-primary">পেমেন্ট মেথড</Text>
                 <Text className="text-xs text-text-secondary mt-0.5">
-                  {order.paymentMethod === "cod" ? "ক্যাশ অন ডেলিভারি (COD)" : "অনলাইন পেমেন্ট"}
+                  {order.paymentMethod === "cod" ? "ক্যাশ অন ডেলিভারি (COD)" : "ইপিএস পেমেন্ট গেটওয়ে (EPS Gateway)"}
                 </Text>
               </View>
             </View>

@@ -317,7 +317,7 @@ export default function OrdersScreen() {
                 </View>
               </View>
 
-              {item.status === "overdue" && item.overdueDays && (
+              {item.status === "overdue" && Boolean(item.overdueDays) && (
                 <View className="bg-red-50 p-2 rounded-lg mt-2">
                   <Text className="text-xs font-bold text-error">
                     {item.overdueDays} দিন অতিক্রান্ত! বিলম্ব জরিমানা: ৳{item.fineAmount || 0}

@@ -18,54 +18,42 @@ import { Button } from "@/components/ui/Button";
 import { useCartStore } from "@/stores/cart-store";
 import { useAuthStore } from "@/stores/auth-store";
 import { ordersApi, type DeliveryAddress } from "@/lib/api/orders";
+import { paymentsApi } from "@/lib/api/payments";
+import * as WebBrowser from "expo-web-browser";
 import { Colors } from "@/constants/theme";
 import { resolveMediaUrl } from "@/lib/utils/media";
 
-type PaymentMethod = "cod" | "bkash" | "nagad" | "rocket" | "card";
+type PaymentMethod = "eps" | "cod";
 type DeliveryMethod = "home" | "pickup";
 
 const PAYMENT_METHODS: {
   id: PaymentMethod;
   label: string;
-  icon: keyof typeof Ionicons.glyphMap;
+  badge?: string;
   description: string;
-  image?: any;
+  icon: keyof typeof Ionicons.glyphMap;
+  supportedLogos?: { key: string; img: any }[];
 }[] = [
-    {
-      id: "cod",
-      label: "ক্যাশ অন ডেলিভারি (COD)",
-      icon: "cash-outline",
-      description: "বই হাতে পেয়ে মূল্য পরিশোধ করুন",
-      image: require("@/assets/icons/payments/cod.png"),
-    },
-    {
-      id: "bkash",
-      label: "বিকাশ (bKash)",
-      icon: "phone-portrait-outline",
-      description: "বিকাশ ইনস্ট্যান্ট পেমেন্ট (EPS)",
-      image: require("@/assets/icons/payments/bkash.png"),
-    },
-    {
-      id: "nagad",
-      label: "নগদ (Nagad)",
-      icon: "wallet-outline",
-      description: "নগদ অনলাইন পেমেন্ট (EPS)",
-      image: require("@/assets/icons/payments/nagad.png"),
-    },
-    {
-      id: "rocket",
-      label: "রকেট (Rocket)",
-      icon: "phone-portrait-outline",
-      description: "রকেট মোবাইল ব্যাংকিং (EPS)",
-      image: require("@/assets/icons/payments/rocket.png"),
-    },
-    {
-      id: "card",
-      label: "কার্ড / নেট ব্যাংকিং",
-      icon: "card-outline",
-      description: "ভিসা, মাস্টারকার্ড বা ইন্টারনেট ব্যাংকিং (EPS)",
-    },
-  ];
+  {
+    id: "eps",
+    label: "ইপিএস পেমেন্ট গেটওয়ে (EPS Gateway)",
+    badge: "ইনস্ট্যান্ট ও নিরাপদ",
+    description: "বিকাশ, নগদ, রকেট, কার্ড (ভিসা/মাস্টারকার্ড) ও ইন্টারনেট ব্যাংকিং",
+    icon: "shield-checkmark-outline",
+    supportedLogos: [
+      { key: "bkash", img: require("@/assets/icons/payments/bkash.png") },
+      { key: "nagad", img: require("@/assets/icons/payments/nagad.png") },
+      { key: "rocket", img: require("@/assets/icons/payments/rocket.png") },
+    ],
+  },
+  {
+    id: "cod",
+    label: "ক্যাশ অন ডেলিভারি (COD)",
+    badge: "হাতে পেয়ে পরিশোধ",
+    description: "বই হাতে পাওয়ার পর নগদ টাকায় মূল্য পরিশোধ করুন",
+    icon: "cash-outline",
+  },
+];
 
 export default function CheckoutScreen() {
   const router = useRouter();
@@ -85,7 +73,7 @@ export default function CheckoutScreen() {
 
   // Form State
   const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>("home");
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cod");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("eps");
   const [submitting, setSubmitting] = useState(false);
 
   // Address fields
@@ -125,7 +113,7 @@ export default function CheckoutScreen() {
     setSubmitting(true);
 
     try {
-      await ordersApi.createOrder({
+      const orderRes = await ordersApi.createOrder({
         cart_item_ids: selectedItems.map((i) => i.book.id),
         items: selectedItems.map((i) => ({
           id: i.book.id,
@@ -143,13 +131,47 @@ export default function CheckoutScreen() {
       // Clear cart
       clearCart();
 
+      // Handle EPS Payment Gateway redirect
+      if (paymentMethod === "eps") {
+        let redirectUrl = orderRes.data?.redirect_url;
+        const paymentIntentId = orderRes.data?.payment_intent?.id;
+
+        // If redirect_url was not returned in checkout response, try explicit EPS initialization
+        if (!redirectUrl && paymentIntentId) {
+          try {
+            const initRes = await paymentsApi.initializeEps(paymentIntentId);
+            redirectUrl = initRes.data?.redirect_url;
+          } catch {
+            // Initialization error fallback
+          }
+        }
+
+        if (redirectUrl && redirectUrl.startsWith("http")) {
+          if (Platform.OS === "web") {
+            window.location.href = redirectUrl;
+            return;
+          } else {
+            await WebBrowser.openBrowserAsync(redirectUrl);
+            router.replace("/tabs/orders" as never);
+            return;
+          }
+        }
+      }
+
+      // Cash on Delivery or fallback confirmation
       if (Platform.OS === "web") {
-        alert("আপনার অর্ডারটি সফলভাবে গ্রহণ করা হয়েছে!");
+        alert(
+          paymentMethod === "cod"
+            ? "ক্যাশ অন ডেলিভারিতে আপনার অর্ডারটি সফলভাবে গ্রহণ করা হয়েছে!"
+            : "আপনার অর্ডারটি সফলভাবে গ্রহণ করা হয়েছে!"
+        );
         router.replace("/tabs/orders" as never);
       } else {
         Alert.alert(
           "অর্ডার সফল হয়েছে!",
-          "আপনার অর্ডারটি গ্রহণ করা হয়েছে। অর্ডার হিস্ট্রিতে এর অগ্রগতি দেখতে পাবেন।",
+          paymentMethod === "cod"
+            ? "ক্যাশ অন ডেলিভারিতে আপনার অর্ডারটি সফলভাবে গ্রহণ করা হয়েছে।"
+            : "আপনার অর্ডারটি গ্রহণ করা হয়েছে। অর্ডার হিস্ট্রিতে এর অগ্রগতি দেখতে পাবেন।",
           [
             {
               text: "অর্ডার দেখুন",
@@ -333,8 +355,14 @@ export default function CheckoutScreen() {
 
         {/* 4. Payment Method */}
         <View className="bg-white rounded-2xl p-4 mb-4 border border-border-light shadow-sm">
-          <Text className="text-sm font-bold text-text-primary mb-3">পেমেন্ট মেথড</Text>
-          <View className="gap-2">
+          <View className="flex-row items-center justify-between mb-3">
+            <Text className="text-sm font-bold text-text-primary">পেমেন্ট মেথড</Text>
+            <View className="flex-row items-center">
+              <Ionicons name="shield-checkmark" size={13} color={Colors.primary} />
+              <Text className="text-[11px] font-semibold text-primary ml-1">১০০% নিরাপদ</Text>
+            </View>
+          </View>
+          <View className="gap-2.5">
             {PAYMENT_METHODS.map((pm) => {
               const selected = paymentMethod === pm.id;
               return (
@@ -342,37 +370,72 @@ export default function CheckoutScreen() {
                   key={pm.id}
                   onPress={() => setPaymentMethod(pm.id)}
                   activeOpacity={0.8}
-                  className={`flex-row items-center p-3 rounded-xl border ${selected ? "border-primary bg-primary/5" : "border-border-light bg-surface-dark"
-                    }`}
+                  className={`p-3.5 rounded-xl border ${
+                    selected ? "border-primary bg-primary/5" : "border-border-light bg-surface-dark"
+                  }`}
                 >
-                  <View className="w-10 h-10 rounded-lg bg-white border border-border-light items-center justify-center mr-3 overflow-hidden">
-                    {pm.image ? (
-                      <Image
-                        source={pm.image}
-                        style={{ width: 28, height: 28 }}
-                        contentFit="contain"
-                      />
-                    ) : (
+                  <View className="flex-row items-start">
+                    <View className="w-10 h-10 rounded-xl bg-white border border-border-light items-center justify-center mr-3 shadow-xs">
                       <Ionicons
                         name={pm.icon}
                         size={22}
                         color={selected ? Colors.primary : Colors.textSecondary}
                       />
-                    )}
+                    </View>
+                    <View className="flex-1">
+                      <View className="flex-row items-center flex-wrap gap-1.5">
+                        <Text className={`text-xs font-bold ${selected ? "text-primary" : "text-text-primary"}`}>
+                          {pm.label}
+                        </Text>
+                        {Boolean(pm.badge) && (
+                          <View className="bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                            <Text className="text-[10px] font-bold text-emerald-700">{pm.badge}</Text>
+                          </View>
+                        )}
+                      </View>
+                      <Text className="text-xs text-text-muted mt-1 leading-4">
+                        {pm.description}
+                      </Text>
+
+                      {/* Supported logos for EPS */}
+                      {Boolean(pm.supportedLogos) && (
+                        <View className="flex-row items-center gap-1.5 mt-2.5 flex-wrap">
+                          {pm.supportedLogos?.map((item) => (
+                            <View
+                              key={item.key}
+                              className="px-2 py-1 rounded-md bg-white border border-border-light"
+                            >
+                              <Image
+                                source={item.img}
+                                style={{ width: 24, height: 18 }}
+                                contentFit="contain"
+                              />
+                            </View>
+                          ))}
+                          <View className="flex-row items-center px-2 py-1 rounded-md bg-white border border-border-light">
+                            <Ionicons name="card-outline" size={14} color={Colors.textSecondary} />
+                            <Text className="text-[10px] font-semibold text-text-secondary ml-1">কার্ড / নেট ব্যাংকিং</Text>
+                          </View>
+                        </View>
+                      )}
+                    </View>
+                    <Ionicons
+                      name={selected ? "radio-button-on" : "radio-button-off"}
+                      size={18}
+                      color={selected ? Colors.primary : Colors.textMuted}
+                    />
                   </View>
-                  <View className="flex-1">
-                    <Text className={`text-xs font-bold ${selected ? "text-primary" : "text-text-primary"}`}>
-                      {pm.label}
-                    </Text>
-                    <Text className="text-xs text-text-muted mt-0.5">
-                      {pm.description}
-                    </Text>
-                  </View>
-                  <Ionicons
-                    name={selected ? "radio-button-on" : "radio-button-off"}
-                    size={18}
-                    color={selected ? Colors.primary : Colors.textMuted}
-                  />
+
+                  {/* Escrow badge for EPS */}
+                  {selected && pm.id === "eps" && (
+                    <View className="mt-3 pt-2.5 border-t border-primary/20 flex-row items-start">
+                      <Ionicons name="shield-checkmark" size={16} color={Colors.primary} style={{ marginTop: 2, marginRight: 6 }} />
+                      <Text className="text-[11px] text-text-secondary leading-4 flex-1">
+                        <Text className="font-bold text-primary">BoiMix এসক্রো সুরক্ষা: </Text>
+                        বই হাতে পেয়ে নিশ্চিত করার পরেই কেবল বিক্রেতা টাকা পাবেন।
+                      </Text>
+                    </View>
+                  )}
                 </TouchableOpacity>
               );
             })}

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   View,
   Text,
@@ -5,6 +6,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   TouchableOpacity,
+  Alert,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useForm, Controller } from "react-hook-form";
@@ -15,8 +17,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Checkbox";
+import { Divider } from "@/components/ui/Divider";
+import { SocialButton } from "@/components/auth/SocialButton";
 import { AuthHeader } from "@/components/auth/AuthHeader";
 import { authApi } from "@/lib/api/auth";
+import { performGoogleSignIn } from "@/lib/auth/google";
 
 // ─── Validation ───────────────────────────────────────────────────────────────
 const registerSchema = z
@@ -81,6 +86,7 @@ function getErrorMessage(error: unknown): string {
 export default function RegisterScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   const {
     control,
@@ -98,6 +104,24 @@ export default function RegisterScreen() {
       terms_accepted: false,
     },
   });
+
+  const handleGoogleLogin = async () => {
+    setGoogleLoading(true);
+    try {
+      const res = await performGoogleSignIn();
+      if (res.success) {
+        router.replace("/tabs");
+      } else if (res.error) {
+        if (!res.error.includes("বাতিল")) {
+          Alert.alert("Google সাইন ইন ব্যর্থ", res.error);
+        }
+      }
+    } catch {
+      Alert.alert("ব্যর্থ হয়েছে", "Google সাইন ইন সম্পন্ন করা যায়নি।");
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
 
   const passwordValue = watch("password");
   const strength = getPasswordStrength(passwordValue);
@@ -267,6 +291,15 @@ export default function RegisterScreen() {
             label="নিবন্ধন করুন"
             onPress={handleSubmit(onSubmit)}
             loading={isSubmitting}
+          />
+
+          <Divider label="অথবা" />
+
+          {/* Google Sign-in */}
+          <SocialButton
+            provider="google"
+            onPress={handleGoogleLogin}
+            loading={googleLoading}
           />
 
           {/* Login Link */}

@@ -47,7 +47,7 @@ export type Order = {
   total_amount?: number;
   status: OrderStatus;
   deliveryAddress: string;
-  paymentMethod: "cod" | "bkash" | "nagad" | "rocket" | "card";
+  paymentMethod: "eps" | "cod" | "bkash" | "nagad" | "rocket" | "card" | string;
   createdAt: string;
   created_at?: string;
 };
@@ -85,7 +85,7 @@ export type CreateOrderPayload = {
     seller?: { id: string };
   }>;
   delivery_address: DeliveryAddress;
-  payment_method: "cod" | "bkash" | "nagad" | "rocket" | "card";
+  payment_method: "eps" | "cod" | "bkash" | "nagad" | "rocket" | "card" | string;
   delivery_method: "home" | "pickup";
   coupon_code?: string | null;
 };
@@ -115,7 +115,13 @@ export const ordersApi = {
     apiClient.get(API_ENDPOINTS.ORDERS.TRACKING(id)),
 
   createOrder: (payload: CreateOrderPayload) =>
-    apiClient.post<{ id: string; order_number: string; payment_url?: string }>(
+    apiClient.post<{
+      id: string;
+      order_number: string;
+      payment_url?: string;
+      redirect_url?: string;
+      payment_intent?: { id: string; amount: string; status: string };
+    }>(
       API_ENDPOINTS.ORDERS.CHECKOUT,
       {
         name: payload.delivery_address.fullName,

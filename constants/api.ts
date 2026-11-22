@@ -91,6 +91,14 @@ export const API_ENDPOINTS = {
     COMPLETE: (id: string) => `/orders/${id}/complete/`,
     CONFIRM_RECEIPT: (id: string) => `/orders/${id}/confirm-receipt/`,
   },
+  // Payments & EPS Gateway (Mounted at /api/v1/payments/)
+  PAYMENTS: {
+    INTENTS: "/payments/intents/",
+    METHODS: "/payments/methods/",
+    EPS_INITIALIZE: (intentId: string) => `/payments/eps/intents/${intentId}/initialize/`,
+    EPS_VERIFY: (intentId: string) => `/payments/eps/intents/${intentId}/verify/`,
+    EPS_DETAILS: (intentId: string) => `/payments/eps/intents/${intentId}/`,
+  },
   // Notifications (Mounted at /api/v1/notifications/)
   NOTIFICATIONS: {
     LIST: "/notifications/",

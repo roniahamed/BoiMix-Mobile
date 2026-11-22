@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/Button";
 import { Divider } from "@/components/ui/Divider";
 import { SocialButton } from "@/components/auth/SocialButton";
 import { authApi } from "@/lib/api/auth";
+import { performGoogleSignIn } from "@/lib/auth/google";
 import { useAuthStore } from "@/stores/auth-store";
 import { Image } from "expo-image";
 
@@ -125,14 +126,16 @@ export default function LoginScreen() {
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
     try {
-      // TODO: Implement Firebase Google Auth
-      // const { idToken } = await signInWithGoogle();
-      // const response = await authApi.googleAuth({ id_token: idToken });
-      // await setSession(response.data.user, response.data.access, response.data.refresh);
-      // router.replace("/(tabs)/");
-      Alert.alert("শীঘ্রই আসছে", "Google সাইন ইন খুব শীঘ্রই চালু হবে।");
+      const res = await performGoogleSignIn();
+      if (res.success) {
+        router.replace("/tabs");
+      } else if (res.error) {
+        if (!res.error.includes("বাতিল")) {
+          Alert.alert("Google সাইন ইন ব্যর্থ", res.error);
+        }
+      }
     } catch {
-      Alert.alert("ব্যর্থ হয়েছে", "Google সাইন ইন করা যায়নি।");
+      Alert.alert("ব্যর্থ হয়েছে", "Google সাইন ইন সম্পন্ন করা যায়নি।");
     } finally {
       setGoogleLoading(false);
     }

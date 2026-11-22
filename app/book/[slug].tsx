@@ -373,7 +373,7 @@ export default function BookDetailScreen() {
           )}
 
           {/* Current image label badge (e.g. সামনের প্রচ্ছদ, ভেতরের পাতা) */}
-          {allImages[activeImageIndex]?.label && (
+          {Boolean(allImages[activeImageIndex]?.label) && (
             <View className="absolute bottom-3 left-4 bg-black/60 px-2.5 py-1 rounded-md">
               <Text className="text-white text-[11px] font-semibold">
                 {allImages[activeImageIndex].label}
@@ -471,7 +471,7 @@ export default function BookDetailScreen() {
         <View className="p-5">
           {/* Badges row */}
           <View className="flex-row gap-2 mb-3 flex-wrap">
-            {book.availabilityMode && (
+            {book.availabilityMode ? (
               <View className="bg-primary/10 px-2.5 py-1 rounded-md">
                 <Text className="text-xs font-semibold text-primary">
                   {((
@@ -484,19 +484,19 @@ export default function BookDetailScreen() {
                   )[book.availabilityMode] ?? book.availabilityMode)}
                 </Text>
               </View>
-            )}
-            {conditionLabel && (
+            ) : null}
+            {conditionLabel ? (
               <View style={{ backgroundColor: conditionLabel.color + "20" }} className="px-2.5 py-1 rounded-md">
                 <Text style={{ color: conditionLabel.color }} className="text-xs font-semibold">
                   {conditionLabel.labelBn}
                 </Text>
               </View>
-            )}
-            {book.isOutOfStock && (
+            ) : null}
+            {book.isOutOfStock ? (
               <View className="bg-error/10 px-2.5 py-1 rounded-md">
                 <Text className="text-xs font-semibold text-error">স্টক নেই</Text>
               </View>
-            )}
+            ) : null}
           </View>
 
           {/* Title & Author */}
