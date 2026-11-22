@@ -17,6 +17,7 @@ import { Colors } from "@/constants/theme";
 import { Button } from "@/components/ui/Button";
 import { usersApi } from "@/lib/api/users";
 import { ordersApi } from "@/lib/api/orders";
+import { resolveMediaUrl } from "@/lib/utils/media";
 import type { BookCardBook } from "@/types/book";
 
 export default function ExchangeProposeScreen() {
@@ -106,7 +107,7 @@ export default function ExchangeProposeScreen() {
         </Text>
         <View className="flex-row bg-white rounded-2xl p-4 border border-border mb-6">
           <Image
-            source={{ uri: params.image || "https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=400" }}
+            source={{ uri: resolveMediaUrl(params.image) }}
             style={{ width: 68, height: 96, borderRadius: 8 }}
             contentFit="cover"
           />
@@ -185,7 +186,7 @@ export default function ExchangeProposeScreen() {
                   }`}
                 >
                   <Image
-                    source={{ uri: book.coverUrl || (book as any).coverImage || "https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=400" }}
+                    source={{ uri: resolveMediaUrl(book.coverUrl || (book as any).coverImage) }}
                     style={{ width: 48, height: 64, borderRadius: 6 }}
                     contentFit="cover"
                   />

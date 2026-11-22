@@ -121,15 +121,18 @@ export default function HomeScreen() {
             contentFit="contain"
           />
         </View>
-        <View className="flex-row items-center gap-2">
-          <TouchableOpacity onPress={() => router.push("/search" as never)} className="w-10 h-10 bg-surface-dark rounded-xl items-center justify-center">
-            <Ionicons name="search-outline" size={20} color={Colors.textPrimary} />
+        <View className="flex-row items-center gap-1.5">
+          <TouchableOpacity onPress={() => router.push("/search" as never)} className="w-9 h-9 bg-surface-dark rounded-xl items-center justify-center">
+            <Ionicons name="search-outline" size={19} color={Colors.textPrimary} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => router.push("/notifications" as never)} className="w-10 h-10 bg-surface-dark rounded-xl items-center justify-center">
-            <Ionicons name="notifications-outline" size={20} color={Colors.textPrimary} />
+          <TouchableOpacity onPress={() => router.push("/messages" as never)} className="w-9 h-9 bg-surface-dark rounded-xl items-center justify-center">
+            <Ionicons name="chatbubble-ellipses-outline" size={19} color={Colors.textPrimary} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => router.push("/cart" as never)} className="w-10 h-10 bg-surface-dark rounded-xl items-center justify-center">
-            <Ionicons name="cart-outline" size={20} color={Colors.textPrimary} />
+          <TouchableOpacity onPress={() => router.push("/notifications" as never)} className="w-9 h-9 bg-surface-dark rounded-xl items-center justify-center">
+            <Ionicons name="notifications-outline" size={19} color={Colors.textPrimary} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push("/cart" as never)} className="w-9 h-9 bg-surface-dark rounded-xl items-center justify-center">
+            <Ionicons name="cart-outline" size={19} color={Colors.textPrimary} />
           </TouchableOpacity>
         </View>
       </View>

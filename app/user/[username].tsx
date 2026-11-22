@@ -175,7 +175,7 @@ export default function UserPublicProfileScreen() {
             <View className="flex-row gap-2 mb-2">
               <TouchableOpacity
                 onPress={() => followMutation.mutate()}
-                className={`px-4 py-2 rounded-xl flex-row items-center border ${
+                className={`px-3.5 py-2 rounded-xl flex-row items-center border ${
                   isFollowing
                     ? "bg-slate-100 border-slate-300"
                     : "bg-primary border-primary"
@@ -183,16 +183,34 @@ export default function UserPublicProfileScreen() {
               >
                 <Ionicons
                   name={isFollowing ? "checkmark" : "person-add-outline"}
-                  size={16}
+                  size={15}
                   color={isFollowing ? Colors.textPrimary : "#FFF"}
                 />
                 <Text
-                  className={`text-xs font-bold ml-1.5 ${
+                  className={`text-xs font-bold ml-1 ${
                     isFollowing ? "text-text-primary" : "text-white"
                   }`}
                 >
                   {isFollowing ? "অনুসরণ করছেন" : "অনুসরণ করুন"}
                 </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() =>
+                  router.push({
+                    pathname: "/messages/[id]",
+                    params: {
+                      id: `conv-user-${profile.username}`,
+                      name: profile.name,
+                      username: profile.username,
+                      avatar: profile.avatarUrl || "",
+                    },
+                  })
+                }
+                className="px-3.5 py-2 rounded-xl flex-row items-center border border-slate-300 bg-white shadow-xs"
+              >
+                <Ionicons name="chatbubble-outline" size={15} color={Colors.textPrimary} />
+                <Text className="text-xs font-bold text-text-primary ml-1">মেসেজ</Text>
               </TouchableOpacity>
             </View>
           </View>

@@ -15,6 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/theme";
 import { Button } from "@/components/ui/Button";
 import { ordersApi, type ExchangeOrder } from "@/lib/api/orders";
+import { resolveMediaUrl } from "@/lib/utils/media";
 
 const STATUS_MAP: Record<string, { label: string; bg: string; text: string; icon: keyof typeof Ionicons.glyphMap }> = {
   pending: { label: "অপেক্ষমান", bg: "#FEF3C7", text: "#D97706", icon: "time-outline" },
@@ -161,7 +162,7 @@ export default function ExchangeDetailScreen() {
           </View>
           <View className="flex-row">
             <Image
-              source={{ uri: exchange.requestedBook.coverUrl || (exchange.requestedBook as any).coverImage || "https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=400" }}
+              source={{ uri: resolveMediaUrl(exchange.requestedBook.coverUrl || (exchange.requestedBook as any).coverImage) }}
               style={{ width: 60, height: 84, borderRadius: 6 }}
               contentFit="cover"
             />
@@ -196,7 +197,7 @@ export default function ExchangeDetailScreen() {
           </View>
           <View className="flex-row">
             <Image
-              source={{ uri: exchange.offeredBook.coverUrl || (exchange.offeredBook as any).coverImage || "https://images.unsplash.com/photo-1512820790803-83ca734da794?w=400" }}
+              source={{ uri: resolveMediaUrl(exchange.offeredBook.coverUrl || (exchange.offeredBook as any).coverImage) }}
               style={{ width: 60, height: 84, borderRadius: 6 }}
               contentFit="cover"
             />

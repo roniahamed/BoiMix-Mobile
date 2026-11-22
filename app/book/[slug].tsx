@@ -288,6 +288,25 @@ export default function BookDetailScreen() {
                   <Text className="text-sm text-text-secondary">এই বইটি এখন স্টকে নেই</Text>
                 </View>
               )}
+              <Button
+                label="মালিককে মেসেজ দিন"
+                onPress={() => {
+                  if (!user) {
+                    router.push("/auth/login");
+                    return;
+                  }
+                  router.push({
+                    pathname: "/messages/[id]",
+                    params: {
+                      id: `conv-book-${book.id}`,
+                      name: (book as any).sellerName || (book as any).ownerName || book.author,
+                      username: (book as any).sellerUsername || (book as any).ownerUsername || "",
+                    },
+                  });
+                }}
+                variant="outline"
+                leftIcon={<Ionicons name="chatbubble-ellipses-outline" size={18} color={Colors.primary} />}
+              />
             </View>
           ) : (
             <View className="gap-3 mb-6">

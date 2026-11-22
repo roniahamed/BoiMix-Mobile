@@ -154,10 +154,13 @@ export default function ProfileScreen() {
 
             {/* Quick Stats Grid */}
             <View className="flex-row items-center justify-between mt-5 pt-4 border-t border-slate-100">
-              <View className="items-center flex-1 border-r border-slate-100">
-                <Text className="text-base font-bold text-text-primary">{stats.booksInLibrary}</Text>
+              <TouchableOpacity
+                onPress={() => router.push("/profile/my-books")}
+                className="items-center flex-1 border-r border-slate-100"
+              >
+                <Text className="text-base font-bold text-primary">{stats.booksInLibrary}</Text>
                 <Text className="text-[11px] text-text-muted mt-0.5">বই তালিকা</Text>
-              </View>
+              </TouchableOpacity>
               <View className="items-center flex-1 border-r border-slate-100">
                 <Text className="text-base font-bold text-text-primary">{stats.booksBorrowed}</Text>
                 <Text className="text-[11px] text-text-muted mt-0.5">ধার নেওয়া</Text>
@@ -198,6 +201,32 @@ export default function ProfileScreen() {
           অ্যাক্টিভিটি ও লেনদেন
         </Text>
         <View className="bg-white rounded-2xl border border-border overflow-hidden mb-4">
+          <TouchableOpacity
+            onPress={() => router.push("/profile/my-books")}
+            className="flex-row items-center p-3.5 border-b border-slate-100"
+          >
+            <View className="w-9 h-9 rounded-xl bg-amber-50 items-center justify-center mr-3">
+              <Ionicons name="library-outline" size={18} color="#D97706" />
+            </View>
+            <Text className="flex-1 text-sm font-semibold text-text-primary">
+              আমার তালিকাভুক্ত বইসমূহ (My Books)
+            </Text>
+            <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => router.push("/messages")}
+            className="flex-row items-center p-3.5 border-b border-slate-100"
+          >
+            <View className="w-9 h-9 rounded-xl bg-violet-50 items-center justify-center mr-3">
+              <Ionicons name="chatbubbles-outline" size={18} color="#7C3AED" />
+            </View>
+            <Text className="flex-1 text-sm font-semibold text-text-primary">
+              মেসেজ ও চ্যাট (Messages)
+            </Text>
+            <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />
+          </TouchableOpacity>
+
           <TouchableOpacity
             onPress={() => router.push("/tabs/orders")}
             className="flex-row items-center p-3.5 border-b border-slate-100"

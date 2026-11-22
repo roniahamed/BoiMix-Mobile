@@ -17,6 +17,8 @@ import { Button } from "@/components/ui/Button";
 import { booksApi } from "@/lib/api/books";
 import { ordersApi, type CreateBorrowPayload } from "@/lib/api/orders";
 import { Colors } from "@/constants/theme";
+import { resolveMediaUrl } from "@/lib/utils/media";
+import type { BookCardBook } from "@/types/book";
 
 const DURATION_OPTIONS: { id: CreateBorrowPayload["duration"]; label: string; days: number }[] = [
   { id: "1_week", label: "১ সপ্তাহ", days: 7 },
@@ -37,8 +39,14 @@ export default function BorrowScreen() {
   const { data: book, isLoading } = useQuery({
     queryKey: ["book-borrow", bookId],
     queryFn: async () => {
-      const res = await booksApi.getBooks({ page_size: 50 });
-      return res.data.results.find((b) => b.id === bookId);
+      try {
+        const res = await booksApi.getBookDetail(bookId!);
+        const data = res.data;
+        return ("book" in data ? data.book : data) as BookCardBook;
+      } catch {
+        const res = await booksApi.getBooks({ page_size: 50 });
+        return res.data.results.find((b) => b.id === bookId || b.slug === bookId);
+      }
     },
     enabled: !!bookId,
   });
@@ -116,7 +124,7 @@ export default function BorrowScreen() {
         {book && (
           <View className="bg-white rounded-2xl p-4 mb-4 border border-border-light shadow-sm flex-row items-center">
             <Image
-              source={{ uri: book.coverUrl || "https://via.placeholder.com/60x80" }}
+              source={{ uri: resolveMediaUrl(book.coverUrl) }}
               style={{ width: 56, height: 76, borderRadius: 8 }}
               contentFit="cover"
             />

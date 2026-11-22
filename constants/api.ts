@@ -100,4 +100,13 @@ export const API_ENDPOINTS = {
     SUMMARY: "/notifications/summary/",
     DEVICES: "/notifications/devices/",
   },
+  // Chat & Messaging (Mounted at /api/v1/chat/)
+  CHAT: {
+    CONVERSATIONS: "/conversations/",
+    CONVERSATION: (id: string) => `/conversations/${id}/`,
+    MESSAGES: (id: string) => `/conversations/${id}/messages/`,
+    MARK_READ: (id: string) => `/conversations/${id}/read/`,
+    UNREAD_COUNT: "/unread-count/",
+    SUPPORT: "/support/",
+  },
 } as const;
