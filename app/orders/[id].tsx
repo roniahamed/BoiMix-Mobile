@@ -61,7 +61,7 @@ export default function OrderTrackingDetailScreen() {
   const [copied, setCopied] = useState(false);
 
   // Fetch Order
-  const { data: order, isLoading } = useQuery<Order>({
+  const { data: order, isLoading } = useQuery<Order | null>({
     queryKey: ["order-detail", id],
     queryFn: async () => {
       if (id && user) {
@@ -69,56 +69,10 @@ export default function OrderTrackingDetailScreen() {
           const res = await ordersApi.getOrderDetail(id);
           if (res.data) return res.data;
         } catch {
-          // Fallback demo order
+          return null;
         }
       }
-      return {
-        id: id || "bm-ord-8921",
-        orderNumber: "BM-8921",
-        status: "shipped",
-        totalAmount: 480,
-        deliveryAddress: "বাড়ি #১২, রোড #৪, ধানমন্ডি, ঢাকা",
-        paymentMethod: "cod",
-        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-        items: [
-          {
-            id: "item-1",
-            book: {
-              id: "bk-1",
-              title: "দেয়াল",
-              author: "হুমায়ূন আহমেদ",
-              price: 320,
-              coverUrl: "https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=400",
-              slug: "deyal",
-              condition: "like_new",
-              rating: 4.8,
-              reviewCount: 30,
-              tags: ["উপন্যাস"],
-              availability: "in-stock",
-            },
-            quantity: 1,
-            price: 320,
-          },
-          {
-            id: "item-2",
-            book: {
-              id: "bk-2",
-              title: "চাঁদের পাহাড়",
-              author: "বিভূতিভূষণ বন্দ্যোপাধ্যায়",
-              price: 160,
-              coverUrl: "https://images.unsplash.com/photo-1512820790803-83ca734da794?w=400",
-              slug: "chander-pahar",
-              condition: "good",
-              rating: 4.9,
-              reviewCount: 42,
-              tags: ["অ্যাডভেঞ্চার"],
-              availability: "in-stock",
-            },
-            quantity: 1,
-            price: 160,
-          },
-        ],
-      } as unknown as Order;
+      return null;
     },
   });
 
@@ -149,11 +103,31 @@ export default function OrderTrackingDetailScreen() {
     );
   };
 
-  if (isLoading || !order) {
+  if (isLoading) {
     return (
       <View className="flex-1 items-center justify-center bg-white" style={{ paddingTop: insets.top }}>
         <ActivityIndicator size="large" color={Colors.primary} />
         <Text className="text-xs text-text-muted mt-2">অর্ডার লোড হচ্ছে...</Text>
+      </View>
+    );
+  }
+
+  if (!order) {
+    return (
+      <View className="flex-1 items-center justify-center bg-white px-6" style={{ paddingTop: insets.top }}>
+        <View className="w-16 h-16 rounded-full bg-surface-dark items-center justify-center mb-3">
+          <Ionicons name="receipt-outline" size={32} color={Colors.textMuted} />
+        </View>
+        <Text className="text-base font-bold text-text-primary">অর্ডার পাওয়া যায়নি</Text>
+        <Text className="text-xs text-text-muted text-center mt-1 mb-6">
+          অনুরোধকৃত অর্ডারের কোনো তথ্য পাওয়া যায়নি অথবা আপনি লগইন করেননি।
+        </Text>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          className="bg-primary px-6 py-2.5 rounded-xl"
+        >
+          <Text className="text-white font-bold text-xs">ফিরে যান</Text>
+        </TouchableOpacity>
       </View>
     );
   }

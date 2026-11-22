@@ -43,6 +43,12 @@ export default function ExploreScreen() {
     buildQueryParams,
   } = useFilterStore();
 
+  const [localInput, setLocalInput] = useState(searchQuery);
+
+  useEffect(() => {
+    setLocalInput(searchQuery);
+  }, [searchQuery]);
+
   useEffect(() => {
     if (params.mode) {
       setMode(params.mode as any);
@@ -82,9 +88,11 @@ export default function ExploreScreen() {
 
   // Debounced search
   const handleSearch = (text: string) => {
-    setSearchQuery(text);
+    setLocalInput(text);
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => { refetch(); }, 300);
+    debounceRef.current = setTimeout(() => {
+      setSearchQuery(text);
+    }, 350);
   };
 
   const handleLoadMore = () => {
@@ -145,9 +153,12 @@ export default function ExploreScreen() {
       {/* Header */}
       <View style={{ paddingTop: insets.top + 8 }} className="bg-white px-4 pb-3 border-b border-border-light">
         <SearchBar
-          value={searchQuery}
+          value={localInput}
           onChangeText={handleSearch}
-          onClear={() => { setSearchQuery(""); refetch(); }}
+          onClear={() => {
+            setLocalInput("");
+            setSearchQuery("");
+          }}
           onFilterPress={() => setFilterVisible(true)}
           filterCount={getActiveFilterCount()}
         />

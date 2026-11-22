@@ -28,45 +28,6 @@ const TYPE_ICONS: Record<string, { icon: keyof typeof Ionicons.glyphMap; color: 
   system: { icon: "information-circle-outline", color: "#475569", bg: "#F1F5F9" },
 };
 
-// Fallback mock notifications if backend returns empty or in development
-const FALLBACK_NOTIFICATIONS: Notification[] = [
-  {
-    id: "notif-1",
-    type: "exchange_offer",
-    title: "নতুন বিনিময় প্রস্তাব!",
-    description: "রাকিবুল হাসান আপনার 'দেয়াল' বইটির বিপরীতে 'চাঁদের পাহাড়' বইটি দিতে প্রস্তাব করেছেন।",
-    createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-    isRead: false,
-    actionUrl: "/tabs/orders",
-  },
-  {
-    id: "notif-2",
-    type: "borrow_approved",
-    title: "বই ধার অনুমোদন পেয়েছে",
-    description: "আপনার 'শ্রীকান্ত' বই ধারের অনুরোধ বিক্রেতা কর্তৃক অনুমোদিত হয়েছে।",
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString(),
-    isRead: false,
-    actionUrl: "/tabs/orders",
-  },
-  {
-    id: "notif-3",
-    type: "order",
-    title: "অর্ডার কনফার্মেশন",
-    description: "আপনার বুক অর্ডার #BM-9821 নিশ্চিত করা হয়েছে এবং প্যাকিং চলছে।",
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-    isRead: true,
-    actionUrl: "/tabs/orders",
-  },
-  {
-    id: "notif-4",
-    type: "system",
-    title: "BoiMix-এ স্বাগতম",
-    description: "আপনার বইয়ের তাক সাজান এবং নতুন পাঠকদের সাথে সংযোগ স্থাপন করুন।",
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(),
-    isRead: true,
-  },
-];
-
 export default function NotificationsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -80,13 +41,12 @@ export default function NotificationsScreen() {
       if (user) {
         try {
           const res = await notificationsApi.getNotifications();
-          const results = res.data?.results;
-          if (results && results.length > 0) return results;
+          return res.data?.results ?? (Array.isArray(res.data) ? res.data : []);
         } catch {
-          // Fallback
+          return [];
         }
       }
-      return FALLBACK_NOTIFICATIONS;
+      return [];
     },
   });
 

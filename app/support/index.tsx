@@ -5,12 +5,15 @@ import {
   ScrollView,
   TouchableOpacity,
   Linking,
+  ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 
 import { Colors } from "@/constants/theme";
+import { useAuthStore } from "@/stores/auth-store";
+import { messagesApi } from "@/lib/api/messages";
 
 type FAQItem = {
   id: string;
@@ -56,19 +59,42 @@ export default function SupportScreen() {
   const insets = useSafeAreaInsets();
   const [expandedId, setExpandedId] = useState<string | null>("faq-1");
 
+  const user = useAuthStore((s) => s.user);
+  const [chatLoading, setChatLoading] = useState(false);
+
   const toggleFaq = (id: string) => {
     setExpandedId((prev) => (prev === id ? null : id));
   };
 
-  const handleLiveChat = () => {
-    router.push({
-      pathname: "/messages/[id]",
-      params: {
-        id: "conv-support-official",
-        name: "BoiMix সাপোর্ট টিম",
-        username: "boimix_support",
-      },
-    });
+  const handleLiveChat = async () => {
+    if (!user) {
+      router.push("/auth/login");
+      return;
+    }
+    setChatLoading(true);
+    try {
+      const res = await messagesApi.getSupportConversation();
+      const conv = res.data;
+      router.push({
+        pathname: "/messages/[id]",
+        params: {
+          id: conv.id,
+          name: "BoiMix সাপোর্ট টিম",
+          username: "support",
+        },
+      });
+    } catch {
+      router.push({
+        pathname: "/messages/[id]",
+        params: {
+          id: "support",
+          name: "BoiMix সাপোর্ট টিম",
+          username: "support",
+        },
+      });
+    } finally {
+      setChatLoading(false);
+    }
   };
 
   const handleCall = () => {
@@ -105,13 +131,20 @@ export default function SupportScreen() {
 
           <TouchableOpacity
             onPress={handleLiveChat}
+            disabled={chatLoading}
             activeOpacity={0.85}
             className="bg-white rounded-xl py-3 px-4 mt-5 flex-row items-center justify-center gap-2"
           >
-            <Ionicons name="chatbubbles" size={18} color={Colors.primary} />
-            <Text className="text-xs font-bold text-primary">
-              লাইভ চ্যাট শুরু করুন
-            </Text>
+            {chatLoading ? (
+              <ActivityIndicator size="small" color={Colors.primary} />
+            ) : (
+              <>
+                <Ionicons name="chatbubbles" size={18} color={Colors.primary} />
+                <Text className="text-xs font-bold text-primary">
+                  লাইভ চ্যাট শুরু করুন
+                </Text>
+              </>
+            )}
           </TouchableOpacity>
         </View>
 

@@ -7,6 +7,7 @@ import {
   TextInput,
   ActivityIndicator,
   Alert,
+  Platform,
 } from "react-native";
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -62,16 +63,21 @@ export default function ExchangeProposeScreen() {
       });
     },
     onSuccess: () => {
-      Alert.alert(
-        "সফল প্রস্তাবনা",
-        "বিনিময়ের প্রস্তাবটি সফলভাবে পাঠানো হয়েছে! বইয়ের মালিক এটি গ্রহণ করলে আপনাকে অবহিত করা হবে।",
-        [
-          {
-            text: "অর্ডার ও বিনিময় দেখুন",
-            onPress: () => router.replace("/tabs/orders"),
-          },
-        ]
-      );
+      if (Platform.OS === "web") {
+        alert("বিনিময়ের প্রস্তাবটি সফলভাবে পাঠানো হয়েছে! বইয়ের মালিক এটি গ্রহণ করলে আপনাকে অবহিত করা হবে।");
+        router.replace("/tabs/orders");
+      } else {
+        Alert.alert(
+          "সফল প্রস্তাবনা",
+          "বিনিময়ের প্রস্তাবটি সফলভাবে পাঠানো হয়েছে! বইয়ের মালিক এটি গ্রহণ করলে আপনাকে অবহিত করা হবে।",
+          [
+            {
+              text: "অর্ডার ও বিনিময় দেখুন",
+              onPress: () => router.replace("/tabs/orders"),
+            },
+          ]
+        );
+      }
     },
     onError: (err: any) => {
       Alert.alert(
@@ -118,7 +124,7 @@ export default function ExchangeProposeScreen() {
             <Text className="text-xs text-text-secondary mt-1">
               লেখক: {params.author || "অজানা"}
             </Text>
-            {params.owner_name && (
+            {Boolean(params.owner_name) && (
               <View className="flex-row items-center mt-2 bg-emerald-50 px-2.5 py-1 rounded-full self-start">
                 <Ionicons name="person-outline" size={12} color={Colors.primary} />
                 <Text className="text-xs text-primary font-medium ml-1">

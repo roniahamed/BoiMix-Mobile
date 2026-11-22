@@ -1,9 +1,11 @@
+import { useState } from "react";
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
-  Alert,
+  Modal,
+  ActivityIndicator,
 } from "react-native";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
@@ -36,24 +38,24 @@ export default function ProfileScreen() {
     enabled: !!user,
   });
 
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  const confirmLogout = async () => {
+    setLoggingOut(true);
+    try {
+      await authApi.logout().catch(() => {});
+    } finally {
+      await clearSession();
+      queryClient.clear();
+      setShowLogoutModal(false);
+      setLoggingOut(false);
+      router.replace("/auth/login");
+    }
+  };
+
   const handleLogout = () => {
-    Alert.alert(
-      "লগআউট নিশ্চিতকরণ",
-      "আপনি কি BoiMix অ্যাকাউন্ট থেকে লগআউট করতে চান?",
-      [
-        { text: "বাতিল", style: "cancel" },
-        {
-          text: "হ্যাঁ, লগআউট",
-          style: "destructive",
-          onPress: async () => {
-            await authApi.logout();
-            await clearSession();
-            queryClient.clear();
-            router.replace("/auth/login");
-          },
-        },
-      ]
-    );
+    setShowLogoutModal(true);
   };
 
   const stats = profile?.stats || {
@@ -132,12 +134,12 @@ export default function ProfileScreen() {
                     <Ionicons name="checkmark-circle" size={16} color={Colors.primary} />
                   </View>
                 </View>
-                {user?.username && (
+                {Boolean(user?.username) && (
                   <Text className="text-xs text-text-muted mt-0.5">
                     @{user.username}
                   </Text>
                 )}
-                {user?.email && (
+                {Boolean(user?.email) && (
                   <Text className="text-xs text-text-secondary mt-0.5" numberOfLines={1}>
                     {user.email}
                   </Text>
@@ -359,6 +361,50 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         )}
       </ScrollView>
+
+      {/* Logout Confirmation Modal */}
+      <Modal
+        visible={showLogoutModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowLogoutModal(false)}
+      >
+        <View className="flex-1 bg-black/50 justify-center items-center p-5">
+          <View className="bg-white rounded-3xl w-full max-w-sm p-6 shadow-xl border border-border-light items-center">
+            <View className="w-14 h-14 rounded-full bg-red-100 items-center justify-center mb-4">
+              <Ionicons name="log-out-outline" size={28} color={Colors.error} />
+            </View>
+            <Text className="text-lg font-bold text-text-primary text-center">
+              লগআউট নিশ্চিতকরণ
+            </Text>
+            <Text className="text-xs text-text-secondary text-center mt-1.5 mb-6 max-w-xs">
+              আপনি কি নিশ্চিত যে BoiMix অ্যাকাউন্ট থেকে লগআউট করতে চান?
+            </Text>
+
+            <View className="flex-row gap-3 w-full">
+              <TouchableOpacity
+                onPress={() => setShowLogoutModal(false)}
+                disabled={loggingOut}
+                className="flex-1 py-3 rounded-xl border border-border-light items-center"
+              >
+                <Text className="text-sm font-semibold text-text-secondary">বাতিল</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={confirmLogout}
+                disabled={loggingOut}
+                className="flex-1 py-3 rounded-xl bg-error items-center flex-row justify-center"
+              >
+                {loggingOut ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text className="text-sm font-bold text-white">হ্যাঁ, লগআউট</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

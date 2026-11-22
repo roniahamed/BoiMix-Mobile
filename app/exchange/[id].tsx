@@ -29,8 +29,8 @@ export default function ExchangeDetailScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
 
-  // Fetch exchange details or mock fallback
-  const { data: exchange, isLoading, refetch } = useQuery<ExchangeOrder>({
+  // Fetch exchange details
+  const { data: exchange, isLoading, refetch } = useQuery<ExchangeOrder | null>({
     queryKey: ["exchange-detail", id],
     queryFn: async () => {
       try {
@@ -38,41 +38,9 @@ export default function ExchangeDetailScreen() {
         const found = res.data?.results?.find((e: ExchangeOrder) => e.id === id);
         if (found) return found;
       } catch {
-        // fallback mock
+        return null;
       }
-      return {
-        id: id || "ex-1",
-        requestedBook: {
-          id: "req-1",
-          slug: "deyal-humayun-ahmed",
-          title: "দেয়াল",
-          author: "হুমায়ূন আহমেদ",
-          price: 350,
-          originalPrice: 400,
-          coverUrl: "https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=400",
-          tags: ["উপন্যাস", "ইতিহাস"],
-          rating: 4.8,
-          reviewCount: 32,
-          condition: "new",
-          availability: "in-stock",
-        },
-        offeredBook: {
-          id: "off-1",
-          slug: "chander-pahar-bibhutibhushan",
-          title: "চাঁদের পাহাড়",
-          author: "বিভূতিভূষণ বন্দ্যোপাধ্যায়",
-          price: 280,
-          coverUrl: "https://images.unsplash.com/photo-1512820790803-83ca734da794?w=400",
-          tags: ["অ্যাডভেঞ্চার"],
-          rating: 4.9,
-          reviewCount: 45,
-          condition: "good",
-          availability: "in-stock",
-        },
-        otherUserName: "রাকিবুল হাসান",
-        status: "pending",
-        createdAt: new Date().toISOString(),
-      };
+      return null;
     },
   });
 
@@ -97,11 +65,31 @@ export default function ExchangeDetailScreen() {
     }
   };
 
-  if (isLoading || !exchange) {
+  if (isLoading) {
     return (
       <View className="flex-1 items-center justify-center bg-white" style={{ paddingTop: insets.top }}>
         <ActivityIndicator size="large" color={Colors.primary} />
         <Text className="text-xs text-text-muted mt-2">বিনিময় বিবরণ লোড হচ্ছে...</Text>
+      </View>
+    );
+  }
+
+  if (!exchange) {
+    return (
+      <View className="flex-1 items-center justify-center bg-white px-6" style={{ paddingTop: insets.top }}>
+        <View className="w-16 h-16 rounded-full bg-surface-dark items-center justify-center mb-3">
+          <Ionicons name="swap-horizontal-outline" size={32} color={Colors.textMuted} />
+        </View>
+        <Text className="text-base font-bold text-text-primary">বিনিময়ের বিবরণ পাওয়া যায়নি</Text>
+        <Text className="text-xs text-text-muted text-center mt-1 mb-6">
+          এই প্রস্তাবটি ইতিমধ্যে সমাপ্ত হয়েছে অথবা আর বিদ্যমান নেই।
+        </Text>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          className="bg-primary px-6 py-2.5 rounded-xl"
+        >
+          <Text className="text-white font-bold text-xs">ফিরে যান</Text>
+        </TouchableOpacity>
       </View>
     );
   }

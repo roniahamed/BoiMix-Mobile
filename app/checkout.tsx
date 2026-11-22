@@ -6,6 +6,7 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
+  Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -142,29 +143,39 @@ export default function CheckoutScreen() {
       // Clear cart
       clearCart();
 
-      Alert.alert(
-        "অর্ডার সফল হয়েছে!",
-        "আপনার অর্ডারটি গ্রহণ করা হয়েছে। অর্ডার হিস্ট্রিতে এর অগ্রগতি দেখতে পাবেন।",
-        [
-          {
-            text: "অর্ডার দেখুন",
-            onPress: () => router.replace("/tabs/orders" as never),
-          },
-        ],
-      );
+      if (Platform.OS === "web") {
+        alert("আপনার অর্ডারটি সফলভাবে গ্রহণ করা হয়েছে!");
+        router.replace("/tabs/orders" as never);
+      } else {
+        Alert.alert(
+          "অর্ডার সফল হয়েছে!",
+          "আপনার অর্ডারটি গ্রহণ করা হয়েছে। অর্ডার হিস্ট্রিতে এর অগ্রগতি দেখতে পাবেন।",
+          [
+            {
+              text: "অর্ডার দেখুন",
+              onPress: () => router.replace("/tabs/orders" as never),
+            },
+          ],
+        );
+      }
     } catch {
       // Offline / Demo fallback
       clearCart();
-      Alert.alert(
-        "অর্ডার সফল হয়েছে!",
-        "আপনার অর্ডারটি নিশ্চিত করা হয়েছে।",
-        [
-          {
-            text: "অর্ডার দেখুন",
-            onPress: () => router.replace("/tabs/orders" as never),
-          },
-        ],
-      );
+      if (Platform.OS === "web") {
+        alert("আপনার অর্ডারটি সফলভাবে নিশ্চিত করা হয়েছে!");
+        router.replace("/tabs/orders" as never);
+      } else {
+        Alert.alert(
+          "অর্ডার সফল হয়েছে!",
+          "আপনার অর্ডারটি নিশ্চিত করা হয়েছে।",
+          [
+            {
+              text: "অর্ডার দেখুন",
+              onPress: () => router.replace("/tabs/orders" as never),
+            },
+          ],
+        );
+      }
     } finally {
       setSubmitting(false);
     }

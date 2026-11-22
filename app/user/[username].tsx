@@ -24,7 +24,7 @@ export default function UserPublicProfileScreen() {
   const { username } = useLocalSearchParams<{ username: string }>();
 
   // Fetch user profile
-  const { data: profile, isLoading } = useQuery<UserProfile>({
+  const { data: profile, isLoading } = useQuery<UserProfile | null>({
     queryKey: ["user-profile", username],
     queryFn: async () => {
       try {
@@ -33,32 +33,9 @@ export default function UserPublicProfileScreen() {
           if (res.data) return res.data;
         }
       } catch {
-        // fallback
+        return null;
       }
-      return {
-        id: "u-101",
-        name: username ? `${username}` : "বইপ্রেমী সদস্য",
-        username: username || "boipremik",
-        avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400",
-        coverUrl: "https://images.unsplash.com/photo-1507842229458-7629a1b8ddec?w=800",
-        bio: "নিয়মিত বই পড়তে এবং সংগ্রহ করতে পছন্দ করি। গল্প ও উপন্যাস বেশি পড়া হয়।",
-        location: "মিরপুর, ঢাকা",
-        rating: 4.9,
-        reputation: 98,
-        joinedAt: "২০২৩ সালের মার্চ",
-        responseRate: 95,
-        responseTime: "১ ঘণ্টার মধ্যে",
-        isFollowing: false,
-        stats: {
-          booksInLibrary: 14,
-          successfulExchanges: 8,
-          booksBorrowed: 5,
-          booksSold: 12,
-          followers: 42,
-          following: 19,
-        },
-        profileBadges: [],
-      };
+      return null;
     },
   });
 
@@ -72,38 +49,9 @@ export default function UserPublicProfileScreen() {
           return res.data?.results || [];
         }
       } catch {
-        // fallback
+        return [];
       }
-      return [
-        {
-          id: "bk-1",
-          slug: "deyal",
-          title: "দেয়াল",
-          author: "হুমায়ূন আহমেদ",
-          price: 320,
-          originalPrice: 400,
-          coverUrl: "https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=400",
-          tags: ["উপন্যাস", "ইতিহাস"],
-          rating: 4.8,
-          reviewCount: 32,
-          condition: "new",
-          availability: "in-stock",
-        },
-        {
-          id: "bk-2",
-          slug: "chander-pahar",
-          title: "চাঁদের পাহাড়",
-          author: "বিভূতিভূষণ বন্দ্যোপাধ্যায়",
-          price: 250,
-          originalPrice: 300,
-          coverUrl: "https://images.unsplash.com/photo-1512820790803-83ca734da794?w=400",
-          tags: ["অ্যাডভেঞ্চার"],
-          rating: 4.9,
-          reviewCount: 45,
-          condition: "good",
-          availability: "in-stock",
-        },
-      ];
+      return [];
     },
   });
 
@@ -224,7 +172,7 @@ export default function UserPublicProfileScreen() {
               </View>
             </View>
             <Text className="text-xs text-text-muted mt-0.5">@{profile.username}</Text>
-            {profile.bio && (
+            {Boolean(profile.bio) && (
               <Text className="text-xs text-text-secondary mt-2 leading-5">
                 {profile.bio}
               </Text>
@@ -232,7 +180,7 @@ export default function UserPublicProfileScreen() {
 
             {/* Meta Row: Location & Join date */}
             <View className="flex-row flex-wrap items-center gap-4 mt-3">
-              {profile.location && (
+              {Boolean(profile.location) && (
                 <View className="flex-row items-center">
                   <Ionicons name="location-outline" size={14} color={Colors.textMuted} />
                   <Text className="text-xs text-text-muted ml-1">{profile.location}</Text>

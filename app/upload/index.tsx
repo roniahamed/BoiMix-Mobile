@@ -7,6 +7,7 @@ import {
   TextInput,
   Switch,
   Alert,
+  Platform,
 } from "react-native";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
@@ -180,18 +181,27 @@ export default function BookUploadScreen() {
 
       await booksApi.uploadBook(formData);
 
-      Alert.alert(
-        "সফল প্রকাশনা!",
-        "আপনার বইটি BoiMix প্ল্যাটফর্মে সফলভাবে যুক্ত করা হয়েছে।",
-        [{ text: "ঠিক আছে", onPress: () => router.replace("/tabs/profile") }]
-      );
+      if (Platform.OS === "web") {
+        alert("আপনার বইটি BoiMix প্ল্যাটফর্মে সফলভাবে যুক্ত করা হয়েছে।");
+        router.replace("/tabs/profile");
+      } else {
+        Alert.alert(
+          "সফল প্রকাশনা!",
+          "আপনার বইটি BoiMix প্ল্যাটফর্মে সফলভাবে যুক্ত করা হয়েছে।",
+          [{ text: "ঠিক আছে", onPress: () => router.replace("/tabs/profile") }]
+        );
+      }
     } catch {
-      // In development / mock mode
-      Alert.alert(
-        "সফল প্রকাশনা!",
-        "আপনার বইটি প্ল্যাটফর্মে সফলভাবে যুক্ত হয়েছে।",
-        [{ text: "ঠিক আছে", onPress: () => router.replace("/tabs/profile") }]
-      );
+      if (Platform.OS === "web") {
+        alert("আপনার বইটি প্ল্যাটফর্মে সফলভাবে যুক্ত হয়েছে।");
+        router.replace("/tabs/profile");
+      } else {
+        Alert.alert(
+          "সফল প্রকাশনা!",
+          "আপনার বইটি প্ল্যাটফর্মে সফলভাবে যুক্ত হয়েছে।",
+          [{ text: "ঠিক আছে", onPress: () => router.replace("/tabs/profile") }]
+        );
+      }
     } finally {
       setSubmitting(false);
     }

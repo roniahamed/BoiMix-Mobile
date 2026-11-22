@@ -37,6 +37,8 @@ export default function RootLayout() {
             <Stack.Screen name="upload/index" />
             <Stack.Screen name="user/[username]" />
             <Stack.Screen name="notifications/index" />
+            <Stack.Screen name="messages/index" />
+            <Stack.Screen name="messages/[id]" />
             <Stack.Screen name="profile/edit" />
           </Stack>
         </QueryProvider>

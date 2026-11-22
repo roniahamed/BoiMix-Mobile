@@ -1,10 +1,11 @@
 import {
   View,
-    Text,
-    ScrollView,
-    TouchableOpacity,
-    Alert,
-    ActivityIndicator,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+  ActivityIndicator,
+  Platform,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -67,27 +68,37 @@ export default function BorrowScreen() {
         });
       }
 
-      Alert.alert(
-        "ধার অনুমোদনের আবেদন সফল!",
-        "আপনার ধারের অনুরোধ পাঠানো হয়েছে। বই ফেরত দিলে জামানত ৳" + depositAmount + " ফেরত পাবেন।",
-        [
-          {
-            text: "অর্ডার দেখুন",
-            onPress: () => router.replace("/tabs/orders" as never),
-          },
-        ],
-      );
+      if (Platform.OS === "web") {
+        alert("ধার অনুমোদনের আবেদন সফল! বই ফেরত দিলে জামানত ৳" + depositAmount + " ফেরত পাবেন।");
+        router.replace("/tabs/orders" as never);
+      } else {
+        Alert.alert(
+          "ধার অনুমোদনের আবেদন সফল!",
+          "আপনার ধারের অনুরোধ পাঠানো হয়েছে। বই ফেরত দিলে জামানত ৳" + depositAmount + " ফেরত পাবেন।",
+          [
+            {
+              text: "অর্ডার দেখুন",
+              onPress: () => router.replace("/tabs/orders" as never),
+            },
+          ],
+        );
+      }
     } catch {
-      Alert.alert(
-        "ধার নিশ্চিত হয়েছে!",
-        "ধারের অনুরোধ সফলভাবে জমা হয়েছে।",
-        [
-          {
-            text: "ঠিক আছে",
-            onPress: () => router.replace("/tabs/orders" as never),
-          },
-        ],
-      );
+      if (Platform.OS === "web") {
+        alert("ধারের অনুরোধ সফলভাবে জমা হয়েছে।");
+        router.replace("/tabs/orders" as never);
+      } else {
+        Alert.alert(
+          "ধার নিশ্চিত হয়েছে!",
+          "ধারের অনুরোধ সফলভাবে জমা হয়েছে।",
+          [
+            {
+              text: "ঠিক আছে",
+              onPress: () => router.replace("/tabs/orders" as never),
+            },
+          ],
+        );
+      }
     } finally {
       setSubmitting(false);
     }
@@ -121,7 +132,7 @@ export default function BorrowScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Book Card */}
-        {book && (
+        {book ? (
           <View className="bg-white rounded-2xl p-4 mb-4 border border-border-light shadow-sm flex-row items-center">
             <Image
               source={{ uri: resolveMediaUrl(book.coverUrl) }}
@@ -138,7 +149,7 @@ export default function BorrowScreen() {
               </View>
             </View>
           </View>
-        )}
+        ) : null}
 
         {/* Duration Selection */}
         <View className="bg-white rounded-2xl p-4 mb-4 border border-border-light shadow-sm">

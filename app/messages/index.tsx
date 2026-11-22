@@ -178,7 +178,7 @@ export default function MessagesScreen() {
                           <Ionicons name="person" size={24} color={Colors.primary} />
                         </View>
                       )}
-                      {other?.is_online && (
+                      {Boolean(other?.is_online) && (
                         <View className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white" />
                       )}
                     </View>

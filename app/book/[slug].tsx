@@ -50,6 +50,7 @@ export default function BookDetailScreen() {
 
   // ── PDF preview modal state ──
   const [showPdfModal, setShowPdfModal] = useState(false);
+  const [pdfViewerMode, setPdfViewerMode] = useState<"google" | "direct">("google");
 
   // ── Chat creation state ──
   const [creatingChat, setCreatingChat] = useState(false);
@@ -534,11 +535,11 @@ export default function BookDetailScreen() {
           </View>
 
           {/* Location */}
-          {book.location && (
+          {Boolean(book.location) && (
             <View className="flex-row items-center gap-1.5 mb-4">
               <Ionicons name="location-outline" size={16} color={Colors.textSecondary} />
               <Text className="text-sm text-text-secondary">{book.location}</Text>
-              {book.distance && (
+              {Boolean(book.distance) && (
                 <Text className="text-sm text-text-muted">({book.distance})</Text>
               )}
             </View>
@@ -886,12 +887,85 @@ export default function BookDetailScreen() {
 
           {/* Viewer Container */}
           {Platform.OS === "web" ? (
-            <View style={{ flex: 1, backgroundColor: "#262626" }}>
-              <iframe
-                src={resolveMediaUrl(book?.previewPdfUrl || (book as any)?.preview_pdf_url)}
-                style={{ width: "100%", height: "100%", border: "none" } as any}
-                title="Book PDF Preview"
-              />
+            <View style={{ flex: 1, backgroundColor: "#1e293b", overflow: "hidden" }}>
+              {/* Reader Switcher Toolbar */}
+              <View className="flex-row items-center justify-between px-3 py-2 bg-slate-900 border-b border-slate-800">
+                <View className="flex-row items-center gap-2">
+                  <TouchableOpacity
+                    onPress={() => setPdfViewerMode("google")}
+                    className={`px-3 py-1.5 rounded-lg flex-row items-center ${
+                      pdfViewerMode === "google" ? "bg-primary" : "bg-slate-800"
+                    }`}
+                  >
+                    <Ionicons
+                      name="layers-outline"
+                      size={13}
+                      color={pdfViewerMode === "google" ? "#FFFFFF" : "#94A3B8"}
+                    />
+                    <Text
+                      className={`text-xs ml-1.5 font-bold ${
+                        pdfViewerMode === "google" ? "text-white" : "text-slate-400"
+                      }`}
+                    >
+                      স্ক্রোল রিডার
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={() => setPdfViewerMode("direct")}
+                    className={`px-3 py-1.5 rounded-lg flex-row items-center ${
+                      pdfViewerMode === "direct" ? "bg-primary" : "bg-slate-800"
+                    }`}
+                  >
+                    <Ionicons
+                      name="document-text-outline"
+                      size={13}
+                      color={pdfViewerMode === "direct" ? "#FFFFFF" : "#94A3B8"}
+                    />
+                    <Text
+                      className={`text-xs ml-1.5 font-bold ${
+                        pdfViewerMode === "direct" ? "text-white" : "text-slate-400"
+                      }`}
+                    >
+                      সরাসরি ভিউ
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                <TouchableOpacity
+                  onPress={() => {
+                    const pdf = resolveMediaUrl(book?.previewPdfUrl || (book as any)?.preview_pdf_url);
+                    if (typeof window !== "undefined") window.open(pdf, "_blank");
+                  }}
+                  className="px-2.5 py-1 rounded bg-slate-800 flex-row items-center"
+                >
+                  <Ionicons name="expand-outline" size={13} color="#94A3B8" />
+                  <Text className="text-[11px] text-slate-300 ml-1">নতুন ট্যাবে</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Iframe View */}
+              <View style={{ flex: 1, width: "100%", height: "100%" }}>
+                <iframe
+                  src={
+                    pdfViewerMode === "google"
+                      ? `https://docs.google.com/viewer?url=${encodeURIComponent(
+                          resolveMediaUrl(book?.previewPdfUrl || (book as any)?.preview_pdf_url)
+                        )}&embedded=true`
+                      : resolveMediaUrl(book?.previewPdfUrl || (book as any)?.preview_pdf_url)
+                  }
+                  style={
+                    {
+                      width: "100%",
+                      height: "100%",
+                      border: "none",
+                      overflow: "auto",
+                      WebkitOverflowScrolling: "touch",
+                    } as any
+                  }
+                  title="Book PDF Preview"
+                />
+              </View>
             </View>
           ) : (
             <View className="flex-1 items-center justify-center p-6 bg-white">

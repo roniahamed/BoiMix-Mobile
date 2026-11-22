@@ -27,9 +27,15 @@ type MessageItem = {
   createdAt: string;
 };
 
-function formatMessageTime(isoString: string) {
-  const d = new Date(isoString);
-  return d.toLocaleTimeString("bn-BD", { hour: "2-digit", minute: "2-digit" });
+function formatMessageTime(isoString?: string) {
+  if (!isoString) return "";
+  try {
+    const d = new Date(isoString);
+    if (isNaN(d.getTime())) return "";
+    return d.toLocaleTimeString("bn-BD", { hour: "2-digit", minute: "2-digit" });
+  } catch {
+    return "";
+  }
 }
 
 export default function ChatDetailScreen() {
@@ -168,7 +174,7 @@ export default function ChatDetailScreen() {
           </TouchableOpacity>
         </View>
 
-        {username && (
+        {Boolean(username) && (
           <TouchableOpacity
             onPress={() => router.push(`/user/${username}`)}
             className="w-8 h-8 rounded-full bg-surface-dark items-center justify-center border border-border-light"

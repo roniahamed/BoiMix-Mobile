@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Switch,
   Alert,
+  Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -24,6 +25,13 @@ export default function SettingsScreen() {
   const [cacheSize, setCacheSize] = useState("১২.৪ MB");
 
   const handleClearCache = () => {
+    if (Platform.OS === "web") {
+      if (typeof window !== "undefined" && window.confirm("আপনি কি অ্যাপের অস্থায়ী ক্যাশ মেমোরি খালি করতে চান?")) {
+        setCacheSize("০ KB");
+        alert("ক্যাশ মেমোরি সফলভাবে পরিষ্কার করা হয়েছে।");
+      }
+      return;
+    }
     Alert.alert(
       "ক্যাশ মেমোরি পরিষ্কার",
       "আপনি কি অ্যাপের অস্থায়ী ক্যাশ মেমোরি খালি করতে চান?",

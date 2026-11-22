@@ -153,6 +153,23 @@ export default function HomeScreen() {
         </View>
       </View>
 
+      {/* Top Search Bar */}
+      <View className="px-4 py-2 bg-white border-b border-border-light">
+        <TouchableOpacity
+          onPress={() => router.push("/search" as never)}
+          activeOpacity={0.8}
+          className="flex-row items-center bg-surface-dark border border-border-light rounded-2xl px-3.5 py-2.5"
+        >
+          <Ionicons name="search-outline" size={18} color={Colors.textMuted} />
+          <Text className="text-xs text-text-muted ml-2.5 flex-1">
+            বইয়ের নাম, লেখক বা বিষয় খুঁজুন...
+          </Text>
+          <View className="bg-primary/10 px-2 py-0.5 rounded-md">
+            <Text className="text-[10px] font-bold text-primary">খুঁজুন</Text>
+          </View>
+        </TouchableOpacity>
+      </View>
+
       {/* Hero Banner */}
       <View className="mt-3"><HeroBanner items={MOCK_BANNERS} /></View>
 

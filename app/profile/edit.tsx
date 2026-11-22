@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
+  Platform,
 } from "react-native";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
@@ -104,18 +105,28 @@ export default function EditProfileScreen() {
         avatarUrl: avatarUri || user?.avatarUrl,
       });
 
-      Alert.alert("সফল", "প্রোফাইল সফলভাবে আপডেট করা হয়েছে!", [
-        { text: "ঠিক আছে", onPress: () => router.back() },
-      ]);
+      if (Platform.OS === "web") {
+        alert("প্রোফাইল সফলভাবে আপডেট করা হয়েছে!");
+        router.back();
+      } else {
+        Alert.alert("সফল", "প্রোফাইল সফলভাবে আপডেট করা হয়েছে!", [
+          { text: "ঠিক আছে", onPress: () => router.back() },
+        ]);
+      }
     } catch {
       // If backend mock/error, update local store gracefully
       updateUser({
         name,
         avatarUrl: avatarUri || user?.avatarUrl,
       });
-      Alert.alert("সফল", "প্রোফাইল সংরক্ষিত হয়েছে।", [
-        { text: "ঠিক আছে", onPress: () => router.back() },
-      ]);
+      if (Platform.OS === "web") {
+        alert("প্রোফাইল সংরক্ষিত হয়েছে।");
+        router.back();
+      } else {
+        Alert.alert("সফল", "প্রোফাইল সংরক্ষিত হয়েছে।", [
+          { text: "ঠিক আছে", onPress: () => router.back() },
+        ]);
+      }
     } finally {
       setSaving(false);
     }
