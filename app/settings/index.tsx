@@ -39,7 +39,7 @@ export default function SettingsScreen() {
       }
       await clearSession();
       queryClient.clear();
-      router.replace("/(auth)/login" as any);
+      router.replace("/auth/login");
     };
 
     if (Platform.OS === "web") {
@@ -69,7 +69,7 @@ export default function SettingsScreen() {
       } else {
         Alert.alert("সফল", "আপনার অ্যাকাউন্ট সফলভাবে মুছে ফেলা হয়েছে।");
       }
-      router.replace("/(auth)/login" as any);
+      router.replace("/auth/login");
     };
 
     if (Platform.OS === "web") {

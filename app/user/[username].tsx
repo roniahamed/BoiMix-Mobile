@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -60,6 +60,12 @@ export default function UserPublicProfileScreen() {
   });
 
   const [isFollowing, setIsFollowing] = useState(profile?.isFollowing || false);
+
+  useEffect(() => {
+    if (profile) {
+      setIsFollowing(Boolean((profile as any).isFollowing));
+    }
+  }, [profile]);
 
   const formatJoinedDate = (dateStr?: string) => {
     if (!dateStr) return "সম্প্রতি";
