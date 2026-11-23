@@ -12,6 +12,11 @@ export type PaginatedResponse<T> = {
 export type BookListParams = {
   type?: string;
   category?: string;
+  author?: string;
+  publisher?: string;
+  location?: string;
+  language?: string;
+  search?: string;
   condition?: string;
   price_min?: number;
   price_max?: number;
@@ -60,6 +65,9 @@ export const booksApi = {
 
   getBookDetail: (slug: string) =>
     apiClient.get<BookDetailResponse | BookCardBook>(API_ENDPOINTS.BOOKS.DETAIL(slug)),
+
+  getFilterFacet: (facet: string, params: { search?: string; page?: number; page_size?: number } = {}) =>
+    apiClient.get<{ results: { label: string; value: string; count?: number }[]; next: string | null }>(`${API_ENDPOINTS.BOOKS.FILTERS}${facet}/`, { params }),
 
   getCategories: (params: { page?: number; page_size?: number } = {}) =>
     apiClient.get<PaginatedResponse<BookCategory>>(API_ENDPOINTS.BOOKS.CATEGORIES, { params }),

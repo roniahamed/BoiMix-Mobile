@@ -17,6 +17,10 @@ type FilterState = {
   distanceKm: number | null;
   sortBy: SortOption;
   searchQuery: string;
+  location: string;
+  author: string;
+  publisher: string;
+  language: string;
 
   // Actions
   setMode: (mode: BookAvailabilityMode | null) => void;
@@ -28,6 +32,7 @@ type FilterState = {
   setDistanceKm: (km: number | null) => void;
   setSortBy: (sort: SortOption) => void;
   setSearchQuery: (query: string) => void;
+  applyDetails: (details: { location: string; author: string; publisher: string; language: string; categories: string[]; conditions: BookCondition[]; mode: BookAvailabilityMode | null }) => void;
   resetFilters: () => void;
   getActiveFilterCount: () => number;
   buildQueryParams: () => Record<string, string>;
@@ -42,6 +47,10 @@ const initialState = {
   distanceKm: null,
   sortBy: "newest" as SortOption,
   searchQuery: "",
+  location: "",
+  author: "",
+  publisher: "",
+  language: "",
 };
 
 export const useFilterStore = create<FilterState>()((set, get) => ({
@@ -75,12 +84,18 @@ export const useFilterStore = create<FilterState>()((set, get) => ({
 
   setSearchQuery: (searchQuery) => set({ searchQuery }),
 
+  applyDetails: (details) => set(details),
+
   resetFilters: () => set((state) => ({ ...initialState, searchQuery: state.searchQuery })),
 
   getActiveFilterCount: () => {
     const state = get();
     let count = 0;
     if (state.mode) count++;
+    if (state.location) count++;
+    if (state.author) count++;
+    if (state.publisher) count++;
+    if (state.language) count++;
     if (state.categories.length > 0) count++;
     if (state.conditions.length > 0) count++;
     if (state.priceMin !== null || state.priceMax !== null) count++;
@@ -94,13 +109,18 @@ export const useFilterStore = create<FilterState>()((set, get) => ({
     const params: Record<string, string> = {};
 
     if (state.mode) params.type = state.mode;
+    if (state.location) params.location = state.location;
+    if (state.author) params.author = state.author;
+    if (state.publisher) params.publisher = state.publisher;
+    if (state.language) params.language = state.language;
     if (state.categories.length > 0) params.category = state.categories.join(",");
     if (state.conditions.length > 0) params.condition = state.conditions.join(",");
-    if (state.priceMin !== null) params.price_min = String(state.priceMin);
-    if (state.priceMax !== null) params.price_max = String(state.priceMax);
+    if (state.priceMin !== null) params.min_price = String(state.priceMin);
+    if (state.priceMax !== null) params.max_price = String(state.priceMax);
     if (state.distanceKm !== null) params.radius = String(state.distanceKm);
-    if (state.sortBy) params.ordering = state.sortBy;
-    if (state.searchQuery.trim()) params.q = state.searchQuery.trim();
+    const orderings: Record<SortOption, string> = { newest: "-created_at", rating: "-owner__profile__public_rating", price_low: "price", price_high: "-price", distance: "distance" };
+    if (state.sortBy) params.ordering = orderings[state.sortBy];
+    if (state.searchQuery.trim()) params.search = state.searchQuery.trim();
 
     return params;
   },

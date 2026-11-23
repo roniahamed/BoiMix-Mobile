@@ -2,11 +2,11 @@ import { useState } from "react";
 import {
   View,
   Text,
-  FlatList,
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
 } from "react-native";
+import { FlashList } from "@shopify/flash-list";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
@@ -123,18 +123,19 @@ export default function CategoryDetailScreen() {
           <Text className="text-xs text-text-muted mt-2">বই লোড হচ্ছে...</Text>
         </View>
       ) : (
-        <FlatList
+        <FlashList
           key={slug}
           data={books ?? []}
           keyExtractor={(item) => item.id}
           numColumns={2}
+          masonry
+          optimizeItemArrangement={false}
           contentContainerStyle={{ padding: 12, paddingBottom: insets.bottom + 40 }}
-          columnWrapperStyle={{ justifyContent: "space-between" }}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
           renderItem={({ item }) => (
-            <View className="w-[48%] mb-3">
+            <View className="px-1">
               <BookCard book={item} variant="grid" />
             </View>
           )}

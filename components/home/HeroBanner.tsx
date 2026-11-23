@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, useWindowDimensions, FlatList } from "react-native";
+import { View, Text, TouchableOpacity, useWindowDimensions, ScrollView } from "react-native";
 import { Image } from "expo-image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "expo-router";
@@ -32,7 +32,7 @@ export function HeroBanner({ items, autoScrollInterval = 4000 }: Props) {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const [activeIndex, setActiveIndex] = useState(0);
-  const flatListRef = useRef<FlatList>(null);
+  const flatListRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const startAutoScroll = useCallback(() => {
@@ -41,11 +41,11 @@ export function HeroBanner({ items, autoScrollInterval = 4000 }: Props) {
     timerRef.current = setInterval(() => {
       setActiveIndex((prev) => {
         const next = (prev + 1) % items.length;
-        flatListRef.current?.scrollToIndex({ index: next, animated: true });
+        flatListRef.current?.scrollTo({ x: next * width, animated: true });
         return next;
       });
     }, autoScrollInterval);
-  }, [items.length, autoScrollInterval]);
+  }, [items.length, autoScrollInterval, width]);
 
   useEffect(() => {
     if (items.length <= 1) return;
@@ -67,31 +67,20 @@ export function HeroBanner({ items, autoScrollInterval = 4000 }: Props) {
 
   return (
     <View className="mb-3">
-      <FlatList
+      <ScrollView
         ref={flatListRef}
-        data={items}
-        keyExtractor={(item) => item.id}
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
-        getItemLayout={(_, index) => ({
-          length: width,
-          offset: width * index,
-          index,
-        })}
-        onScrollToIndexFailed={(info) => {
-          setTimeout(() => {
-            flatListRef.current?.scrollToIndex({ index: info.index, animated: false });
-          }, 50);
-        }}
         onScrollBeginDrag={handleScrollBegin}
-        onMomentumScrollEnd={(e) => {
-          const index = Math.round(e.nativeEvent.contentOffset.x / width);
-          setActiveIndex(index);
+        onMomentumScrollEnd={(event) => {
+          setActiveIndex(Math.round(event.nativeEvent.contentOffset.x / width));
           handleScrollEnd();
         }}
-        renderItem={({ item }) => (
+      >
+        {items.map((item) => (
           <TouchableOpacity
+            key={item.id}
             activeOpacity={0.9}
             style={{ width }}
             onPress={() => {
@@ -125,8 +114,8 @@ export function HeroBanner({ items, autoScrollInterval = 4000 }: Props) {
               </View>
             </View>
           </TouchableOpacity>
-        )}
-      />
+        ))}
+      </ScrollView>
 
       {/* Pagination dots */}
       {items.length > 1 && (

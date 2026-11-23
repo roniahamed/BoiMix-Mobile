@@ -75,9 +75,6 @@ export default function ExploreScreen() {
     queryKey: [...queryKeys.search.books(searchQuery, queryParams), "infinite"],
     queryFn: ({ pageParam = 1 }) => {
       const params = { ...queryParams, page: pageParam as number, page_size: 20 };
-      if (searchQuery.trim()) {
-        return booksApi.searchBooks({ ...params, q: searchQuery });
-      }
       return booksApi.getBooks(params);
     },
     getNextPageParam: (last, pages) => {
@@ -258,6 +255,8 @@ export default function ExploreScreen() {
           keyExtractor={(item) => item.id}
           renderItem={renderBook}
           numColumns={viewMode === "grid" ? 2 : 1}
+          masonry={viewMode === "grid"}
+          optimizeItemArrangement={false}
           key={viewMode}
           contentContainerStyle={{ paddingHorizontal: viewMode === "grid" ? 12 : 16, paddingTop: 4 }}
           onEndReached={handleLoadMore}

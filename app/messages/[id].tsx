@@ -123,7 +123,7 @@ export default function ChatDetailScreen() {
     sendMutation.mutate(text);
   };
 
-  const displayName = name || (username ? `@${username}` : "বইপ্রেমী পাঠক");
+  const displayName = name || (username ? `@${username}` : "অজানা ব্যবহারকারী");
 
   return (
     <KeyboardAvoidingView

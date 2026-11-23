@@ -339,11 +339,7 @@ function BookCardBase({
           </TouchableOpacity>
         )}
 
-        {book.isVerifiedUser && (
-          <View className="absolute bottom-2 right-2 bg-white/90 rounded-full p-0.5">
-            <Ionicons name="checkmark-circle" size={16} color={Colors.info} />
-          </View>
-        )}
+
       </View>
 
       {/* Info */}
@@ -357,6 +353,7 @@ function BookCardBase({
         {book.author}
       </Text>
 
+      {book.isVerifiedUser && <View className="flex-row items-center mt-1"><Ionicons name="checkmark-circle" size={13} color={Colors.primary} /><Text className="text-[10px] text-primary ml-1">Verified seller</Text></View>}
       <View className="flex-row items-center justify-between mt-1.5">
         <PriceTag book={book} />
         <ConditionBadge condition={book.condition} />

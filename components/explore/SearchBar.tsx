@@ -1,5 +1,6 @@
 import {
   View,
+  Text,
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
@@ -59,12 +60,14 @@ export function SearchBar({
       {onFilterPress && (
         <TouchableOpacity
           onPress={onFilterPress}
-          className="relative w-12 h-12 bg-white border border-border rounded-full items-center justify-center shadow-sm"
+          accessibilityRole="button"
+          accessibilityLabel={filterCount > 0 ? `${filterCount}টি ফিল্টার সক্রিয়` : "ফিল্টার খুলুন"}
+          className={`relative w-12 h-12 border rounded-full items-center justify-center shadow-sm ${filterCount > 0 ? "bg-primary border-primary" : "bg-white border-border"}`}
         >
-          <Ionicons name="options-outline" size={20} color={Colors.textPrimary} />
+          <Ionicons name="options-outline" size={20} color={filterCount > 0 ? Colors.textInverse : Colors.textPrimary} />
           {filterCount > 0 && (
-            <View className="absolute -top-1 -right-1 bg-primary rounded-full w-5 h-5 items-center justify-center border-2 border-white">
-              <Ionicons name="ellipse" size={8} color="#FFFFFF" />
+            <View className="absolute -top-1 -right-1 bg-error rounded-full min-w-[18px] h-[18px] px-1 items-center justify-center border border-white">
+              <Text className="text-white text-[10px] font-bold">{filterCount > 9 ? "9+" : filterCount}</Text>
             </View>
           )}
         </TouchableOpacity>

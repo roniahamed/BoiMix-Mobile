@@ -1,7 +1,7 @@
 import {
   View,
   Text,
-  ScrollView,
+  ActivityIndicator,
   RefreshControl,
   TouchableOpacity,
   Alert,
@@ -9,14 +9,17 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { useCallback, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useCallback, useRef, useState } from "react";
+import { FlashList, type FlashListRef } from "@shopify/flash-list";
+import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Location from "expo-location";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 
 import { CategoryCarousel } from "@/components/home/CategoryCarousel";
 import { HeroBanner } from "@/components/home/HeroBanner";
+import { BookCard } from "@/components/shared/BookCard";
+import type { BookCardBook } from "@/types/book";
 import { BookHorizontalList } from "@/components/home/BookHorizontalList";
 import { booksApi } from "@/lib/api/books";
 import { queryKeys } from "@/lib/api/query-keys";
@@ -47,6 +50,9 @@ const MOCK_BANNERS = [
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const listRef = useRef<FlashListRef<BookCardBook>>(null);
+  const [showScrollTop, setShowScrollTop] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -80,6 +86,14 @@ export default function HomeScreen() {
     select: (res) => res.data?.results ?? (Array.isArray(res.data) ? res.data : []),
   });
 
+  const feed = useInfiniteQuery({
+    queryKey: ["home-feed"],
+    queryFn: ({ pageParam }) => booksApi.getBooks({ ordering: "-created_at", page: pageParam, page_size: 20 }),
+    initialPageParam: 1,
+    getNextPageParam: (last, pages) => last.data.next ? pages.length + 1 : undefined,
+  });
+  const feedBooks = feed.data?.pages.flatMap((page) => page.data.results) ?? [];
+
   const { data: categoriesData } = useQuery({
     queryKey: queryKeys.books.categories(),
     queryFn: () => booksApi.getAllCategories(),
@@ -102,9 +116,9 @@ export default function HomeScreen() {
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    await Promise.allSettled([refetchTrending(), refetchNew(), refetchLibrary(), ...(userLocation ? [refetchNearby()] : [])]);
+    await Promise.allSettled([refetchTrending(), refetchNew(), refetchLibrary(), queryClient.resetQueries({ queryKey: ["home-feed"] }), ...(userLocation ? [refetchNearby()] : [])]);
     setRefreshing(false);
-  }, [refetchTrending, refetchNew, refetchNearby, refetchLibrary, userLocation]);
+  }, [refetchTrending, refetchNew, refetchNearby, refetchLibrary, userLocation, queryClient]);
 
   return (
     <View className="flex-1 bg-surface-dark">
@@ -135,11 +149,23 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      <ScrollView
+      <FlashList
+        ref={listRef}
         className="flex-1"
+        data={feedBooks}
+        keyExtractor={(item) => item.id}
+        numColumns={2}
+        masonry
+        optimizeItemArrangement={false}
+        renderItem={({ item }) => <View className="px-1"><BookCard book={item} variant="grid" /></View>}
+        contentContainerStyle={{ paddingHorizontal: 12 }}
+        onEndReached={() => { if (feed.hasNextPage && !feed.isFetching && !feed.isFetchNextPageError) feed.fetchNextPage(); }}
+        onEndReachedThreshold={0.5}
+        onScroll={(event) => setShowScrollTop(event.nativeEvent.contentOffset.y > 500)}
+        scrollEventThrottle={100}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={Colors.primary} colors={[Colors.primary]} />}
-      >
+        ListHeaderComponent={<View>
       {/* Hero Banner */}
       <View className="mt-4"><HeroBanner items={MOCK_BANNERS} /></View>
 
@@ -176,8 +202,12 @@ export default function HomeScreen() {
 
       <BookHorizontalList title="কেন্দ্রীয় লাইব্রেরি" books={libraryData ?? []} loading={libraryLoading} error={libraryError} onRetry={refetchLibrary} seeAllRoute="/search" />
 
-      <View style={{ height: insets.bottom + 16 }} />
-      </ScrollView>
+          <View className="px-4 mb-3"><Text className="text-lg font-bold text-secondary">আরও বই খুঁজুন</Text></View>
+        </View>}
+        ListEmptyComponent={feed.isLoading ? <ActivityIndicator color={Colors.primary} className="my-6" /> : feed.isError ? <TouchableOpacity onPress={() => feed.refetch()} className="items-center py-6"><Text className="text-primary font-semibold">বই লোড হয়নি · আবার চেষ্টা করুন</Text></TouchableOpacity> : <Text className="text-text-secondary text-center py-6">আর কোনো বই পাওয়া যায়নি</Text>}
+        ListFooterComponent={feed.isFetchingNextPage ? <ActivityIndicator color={Colors.primary} className="my-6" /> : feed.isFetchNextPageError ? <TouchableOpacity onPress={() => feed.fetchNextPage()} className="items-center py-6"><Text className="text-primary font-semibold">আরও বই লোড হয়নি · আবার চেষ্টা করুন</Text></TouchableOpacity> : <View style={{ height: insets.bottom + 16 }} />}
+      />
+      {showScrollTop && <TouchableOpacity onPress={() => listRef.current?.scrollToOffset({ offset: 0, animated: true })} accessibilityRole="button" accessibilityLabel="উপরে যান" className="absolute right-4 bottom-5 w-12 h-12 rounded-full bg-primary items-center justify-center shadow-lg"><Ionicons name="arrow-up" size={24} color="white" /></TouchableOpacity>}
     </View>
   );
 }

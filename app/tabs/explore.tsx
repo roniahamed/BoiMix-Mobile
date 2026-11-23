@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { ActivityIndicator, FlatList, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { FlashList } from "@shopify/flash-list";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
@@ -41,7 +42,7 @@ export default function CategoriesScreen() {
   const renderBook = ({ item }: { item: BookCardBook }) => {
     const cover = resolveMediaUrl(item.coverUrl || (item as any).cover_image_url || (item as any).cover_image || (item as any).image);
     return (
-      <View style={{ width: "50%", padding: 4 }}>
+      <View style={{ width: "100%", padding: 4 }}>
         <TouchableOpacity onPress={() => router.push(`/book/${item.slug || item.id}` as never)} activeOpacity={0.85} className="bg-white rounded-xl border border-border-light overflow-hidden h-full">
           <View className="bg-surface-dark items-center justify-center" style={{ height: 145 }}>
             {cover ? <Image source={{ uri: cover }} style={{ width: "100%", height: "100%" }} contentFit="contain" /> : <Ionicons name="book-outline" size={34} color={Colors.textMuted} />}
@@ -80,8 +81,8 @@ export default function CategoriesScreen() {
         </View>
         <View className="flex-1">
           {books.isLoading ? <ActivityIndicator color={Colors.primary} className="mt-12" /> : books.isError && !books.data ? <View className="flex-1 items-center justify-center p-4"><Text className="text-text-secondary text-center mb-3">বই লোড করা যায়নি</Text><TouchableOpacity onPress={() => books.refetch()}><Text className="text-primary font-bold">আবার চেষ্টা করুন</Text></TouchableOpacity></View> : (
-            <FlatList
-              key={selected ?? "all"} data={items} keyExtractor={(item) => item.id} numColumns={2} renderItem={renderBook}
+            <FlashList
+              key={selected ?? "all"} data={items} keyExtractor={(item) => item.id} numColumns={2} masonry optimizeItemArrangement={false} renderItem={renderBook}
               contentContainerStyle={{ padding: 8, paddingBottom: 24 }}
               showsVerticalScrollIndicator={false}
               ListHeaderComponent={<View className="mb-2"><TouchableOpacity onPress={() => router.push("/search")} className="rounded-2xl overflow-hidden mb-4" style={{ height: 112 }}><Image source={require("@/assets/banners/marketplace-hero-green.jpg")} style={{ width: "100%", height: "100%", position: "absolute" }} contentFit="cover" /><View className="justify-center px-3 h-full" style={{ width: "60%" }}><Text className="text-secondary text-base font-bold">পছন্দের বই খুঁজে নিন</Text><Text className="text-primary text-xs font-bold mt-2">বই দেখুন  →</Text></View></TouchableOpacity><View className="bg-primary/10 rounded-xl px-3 py-3 border-l-4 border-primary"><Text className="font-bold text-secondary">{title}</Text><Text className="text-xs text-text-secondary mt-1">{books.data?.pages[0]?.data.count ?? 0}টি বই</Text></View></View>}

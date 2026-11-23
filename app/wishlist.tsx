@@ -115,6 +115,8 @@ export default function WishlistScreen() {
           data={displayBooks}
           keyExtractor={(item) => item.id}
           numColumns={2}
+          masonry
+          optimizeItemArrangement={false}
           contentContainerStyle={{ padding: 12, paddingTop: 16 }}
           renderItem={({ item }: { item: BookCardBook }) => (
             <View className="px-1">

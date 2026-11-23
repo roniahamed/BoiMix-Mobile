@@ -36,6 +36,7 @@ export function CategoryCarousel({ categories }: { categories: BookCategory[] })
   const offset = useSharedValue(0);
   const focused = useSharedValue(false);
   const dragging = useSharedValue(false);
+  const touching = useSharedValue(false);
 
   useFocusEffect(useCallback(() => {
     focused.set(true);
@@ -43,8 +44,8 @@ export function CategoryCarousel({ categories }: { categories: BookCategory[] })
   }, [focused]));
 
   useFrameCallback((frame) => {
-    if (!focused.get() || dragging.get() || reducedMotion || sorted.length === 0) return;
-    const next = (offset.get() + Math.min(frame.timeSincePreviousFrame ?? 0, 40) * 0.018) % cycle;
+    if (!focused.get() || touching.get() || dragging.get() || reducedMotion || sorted.length === 0) return;
+    const next = cycle + ((offset.get() + Math.min(frame.timeSincePreviousFrame ?? 0, 40) * 0.018) % cycle);
     offset.set(next);
     scrollTo(scrollRef, next, 0, false);
   });
@@ -52,12 +53,12 @@ export function CategoryCarousel({ categories }: { categories: BookCategory[] })
   const scrollHandler = useAnimatedScrollHandler({
     onBeginDrag: () => { dragging.set(true); },
     onScroll: (event) => { if (dragging.get()) offset.set(event.contentOffset.x); },
-    onEndDrag: (event) => { if (Math.abs(event.velocity?.x ?? 0) < 0.05) { offset.set(((event.contentOffset.x % cycle) + cycle) % cycle); dragging.set(false); } },
-    onMomentumEnd: (event) => { offset.set(((event.contentOffset.x % cycle) + cycle) % cycle); dragging.set(false); },
+    onEndDrag: (event) => { if (Math.abs(event.velocity?.x ?? 0) < 0.05) { offset.set(cycle + (((event.contentOffset.x % cycle) + cycle) % cycle)); dragging.set(false); } },
+    onMomentumEnd: (event) => { offset.set(cycle + (((event.contentOffset.x % cycle) + cycle) % cycle)); dragging.set(false); },
   });
 
   return (
-    <Animated.ScrollView ref={scrollRef} horizontal showsHorizontalScrollIndicator={false} onScroll={scrollHandler} scrollEventThrottle={16} contentContainerStyle={{ paddingHorizontal: 16 }} style={{ marginBottom: 12 }}>
+    <Animated.ScrollView ref={scrollRef} horizontal showsHorizontalScrollIndicator={false} onTouchStart={() => touching.set(true)} onTouchEnd={() => touching.set(false)} onTouchCancel={() => { touching.set(false); dragging.set(false); }} onScroll={scrollHandler} scrollEventThrottle={16} contentContainerStyle={{ paddingHorizontal: 16 }} style={{ marginBottom: 12 }}>
       {repeated.map(({ category, key }) => {
         const group = category ? priority(category) : -1;
         const icon = group === 0 || group === 1 || group === 2 || group === 3 ? "school-outline" : group === 5 ? "library-outline" : "book-outline";

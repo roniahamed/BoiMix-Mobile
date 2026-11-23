@@ -59,7 +59,7 @@ export default function MessagesScreen({ embedded = false }: { embedded?: boolea
     if (!search.trim()) return true;
     const other = c.other_participant || c.otherParticipant;
     const message = c.last_message || c.lastMessage;
-    const name = other?.full_name || other?.fullName || other?.username || "";
+    const name = c.context_type === "support" || c.contextType === "support" ? "BoiMix Support" : other?.full_name || other?.fullName || other?.username || "";
     const body = message?.body || "";
     return (
       name.toLowerCase().includes(search.toLowerCase()) ||
@@ -143,7 +143,8 @@ export default function MessagesScreen({ embedded = false }: { embedded?: boolea
               }
               renderItem={({ item }) => {
                 const other = item.other_participant || item.otherParticipant;
-                const name = other?.full_name || other?.fullName || other?.username || "বইপ্রেমী পাঠক";
+                const isSupport = (item.context_type || item.contextType) === "support";
+                const name = isSupport ? "BoiMix Support" : other?.full_name || other?.fullName || other?.username || "অজানা ব্যবহারকারী";
                 const lastMessage = item.last_message || item.lastMessage;
                 const lastMsg = lastMessage?.body || lastMessage?.preview_text || lastMessage?.previewText || "কোনো বার্তা নেই";
                 const hasUnread = (item.unread_count ?? item.unreadCount ?? 0) > 0;
@@ -166,7 +167,9 @@ export default function MessagesScreen({ embedded = false }: { embedded?: boolea
                   >
                     {/* Avatar */}
                     <View className="relative mr-3.5">
-                      {other?.avatar_url ? (
+                      {isSupport ? (
+                        <View className="w-12 h-12 rounded-full bg-primary/10 items-center justify-center"><Ionicons name="headset" size={23} color={Colors.primary} /></View>
+                      ) : other?.avatar_url ? (
                         <Image
                           source={{ uri: resolveMediaUrl(other.avatar_url) }}
                           style={{ width: 48, height: 48, borderRadius: 24 }}
@@ -189,7 +192,7 @@ export default function MessagesScreen({ embedded = false }: { embedded?: boolea
                           className={`text-sm ${hasUnread ? "font-bold text-text-primary" : "font-semibold text-text-primary"}`}
                           numberOfLines={1}
                         >
-                          {name}
+                          {name}{isSupport ? "  ✓" : ""}
                         </Text>
                         <Text className="text-[11px] text-text-muted">
                           {formatTime(lastMessage?.created_at || lastMessage?.createdAt || item.updated_at || item.updatedAt)}
