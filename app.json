@@ -16,11 +16,13 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.boimix.app",
+      "buildNumber": "1",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "কাছের বই খুঁজতে আপনার লোকেশন প্রয়োজন।",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "কাছের বই খুঁজতে আপনার লোকেশন প্রয়োজন।",
         "NSCameraUsageDescription": "ISBN স্ক্যান ও বইয়ের ছবি তুলতে ক্যামেরা প্রয়োজন।",
-        "NSPhotoLibraryUsageDescription": "বইয়ের ছবি আপলোড করতে ফটো লাইব্রেরি প্রয়োজন।"
+        "NSPhotoLibraryUsageDescription": "বইয়ের ছবি আপলোড করতে ফটো লাইব্রেরি প্রয়োজন।",
+        "NSPhotoLibraryAddUsageDescription": "বই ও প্রোফাইলের ছবি সংরক্ষণ করতে অনুমতি প্রয়োজন।"
       }
     },
     "android": {
@@ -29,14 +31,31 @@
         "backgroundColor": "#FFFFFF"
       },
       "package": "com.boimix.app",
+      "versionCode": 1,
       "permissions": [
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE",
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.CAMERA",
+        "android.permission.READ_MEDIA_IMAGES",
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.POST_NOTIFICATIONS",
         "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.VIBRATE"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            { "scheme": "boimix" },
+            { "scheme": "https", "host": "boimix.com" },
+            { "scheme": "https", "host": "www.boimix.com" }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
       ]
     },
     "web": {

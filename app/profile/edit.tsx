@@ -7,17 +7,24 @@ import {
   TextInput,
   Alert,
   Platform,
+  ActivityIndicator,
 } from "react-native";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
+import * as Location from "expo-location";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/theme";
 import { Button } from "@/components/ui/Button";
 import { useAuthStore } from "@/stores/auth-store";
 import { usersApi } from "@/lib/api/users";
 import { queryClient } from "@/providers/QueryProvider";
+import {
+  requestCameraPermission,
+  requestMediaLibraryPermission,
+  requestLocationPermission,
+} from "@/lib/permissions";
 
 const READING_GENRES = [
   "উপন্যাস",
@@ -58,29 +65,87 @@ export default function EditProfileScreen() {
     }
   };
 
-  const handlePickAvatar = async () => {
-    try {
-      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!permission.granted) {
-        Alert.alert(
-          "অনুমতি প্রয়োজন",
-          "ছবি নির্বাচন করার জন্য গ্যালারির অনুমতি দিন।"
-        );
-        return;
-      }
+  const [detectingLocation, setDetectingLocation] = useState(false);
 
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ["images"],
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
+  const handlePickAvatar = async () => {
+    if (Platform.OS === "web") {
+      try {
+        const result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ["images"],
+          allowsEditing: true,
+          aspect: [1, 1],
+          quality: 0.8,
+        });
+
+        if (!result.canceled && result.assets && result.assets.length > 0) {
+          setAvatarUri(result.assets[0].uri);
+        }
+      } catch {
+        Alert.alert("ত্রুটি", "ছবি নির্বাচন করা যায়নি।");
+      }
+      return;
+    }
+
+    Alert.alert("প্রোফাইল ছবি পরিবর্তন", "কীভাবে ছবি যুক্ত করতে চান?", [
+      { text: "বাতিল", style: "cancel" },
+      {
+        text: "ক্যামেরা দিয়ে তুলুন",
+        onPress: async () => {
+          const perm = await requestCameraPermission();
+          if (!perm.granted) return;
+          const result = await ImagePicker.launchCameraAsync({
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.8,
+          });
+          if (!result.canceled && result.assets && result.assets.length > 0) {
+            setAvatarUri(result.assets[0].uri);
+          }
+        },
+      },
+      {
+        text: "গ্যালারি থেকে বেছে নিন",
+        onPress: async () => {
+          const perm = await requestMediaLibraryPermission();
+          if (!perm.granted) return;
+          const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ["images"],
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.8,
+          });
+          if (!result.canceled && result.assets && result.assets.length > 0) {
+            setAvatarUri(result.assets[0].uri);
+          }
+        },
+      },
+    ]);
+  };
+
+  const handleDetectLocation = async () => {
+    setDetectingLocation(true);
+    try {
+      const perm = await requestLocationPermission();
+      if (!perm.granted) return;
+
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const reverse = await Location.reverseGeocodeAsync({
+        latitude: loc.coords.latitude,
+        longitude: loc.coords.longitude,
       });
 
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        setAvatarUri(result.assets[0].uri);
+      if (reverse && reverse.length > 0) {
+        const place = reverse[0];
+        const dist = place.city || place.subregion || place.region || district;
+        const ar = place.district || place.street || place.name || area;
+        if (dist) setDistrict(dist);
+        if (ar) setArea(ar);
+        Alert.alert("সফল", `আপনার অবস্থান শনাক্ত করা হয়েছে: ${ar}, ${dist}`);
       }
     } catch {
-      Alert.alert("ত্রুটি", "ছবি নির্বাচন করা যায়নি।");
+      Alert.alert("ত্রুটি", "অবস্থান শনাক্ত করা সম্ভব হয়নি। ম্যানুয়ালি জেলা ও এলাকা লিখুন।");
+    } finally {
+      setDetectingLocation(false);
     }
   };
 
@@ -248,9 +313,25 @@ export default function EditProfileScreen() {
 
         {/* Location Section */}
         <View className="bg-white rounded-2xl p-4 border border-border mb-4">
-          <Text className="text-sm font-bold text-text-primary mb-3">
-            ঠিকানা ও অবস্থান
-          </Text>
+          <View className="flex-row items-center justify-between mb-3">
+            <Text className="text-sm font-bold text-text-primary">
+              ঠিকানা ও অবস্থান
+            </Text>
+            <TouchableOpacity
+              onPress={handleDetectLocation}
+              disabled={detectingLocation}
+              className="flex-row items-center bg-primary/10 px-2.5 py-1 rounded-lg"
+            >
+              {detectingLocation ? (
+                <ActivityIndicator size="small" color={Colors.primary} />
+              ) : (
+                <>
+                  <Ionicons name="locate" size={13} color={Colors.primary} />
+                  <Text className="text-xs font-bold text-primary ml-1">জিপিএস অবস্থান নিন</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
           <View className="flex-row gap-3">
             <View className="flex-1">
               <Text className="text-xs font-bold text-text-secondary uppercase mb-1">

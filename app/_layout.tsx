@@ -5,6 +5,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { QueryProvider } from "@/providers/QueryProvider";
 import { useAuthEvents } from "@/lib/hooks/useAuthEvents";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { OfflineBanner } from "@/components/shared/OfflineBanner";
 import "../global.css";
 
 if (Platform.OS === "web" && typeof document !== "undefined") {
@@ -22,6 +23,7 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <QueryProvider>
+          <OfflineBanner />
           <AppEventListeners />
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="index" />
@@ -41,7 +43,12 @@ export default function RootLayout() {
             <Stack.Screen name="notifications/index" />
             <Stack.Screen name="messages/index" />
             <Stack.Screen name="messages/[id]" />
+            <Stack.Screen name="orders/[id]" />
             <Stack.Screen name="profile/edit" />
+            <Stack.Screen name="profile/my-books" />
+            <Stack.Screen name="category/[slug]" />
+            <Stack.Screen name="settings/index" />
+            <Stack.Screen name="support/index" />
           </Stack>
         </QueryProvider>
       </SafeAreaProvider>

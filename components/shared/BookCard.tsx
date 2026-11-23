@@ -1,3 +1,4 @@
+import { memo } from "react";
 import {
   View,
   Text,
@@ -120,7 +121,7 @@ export function BookCardSkeleton({ variant = "grid" }: { variant?: Variant }) {
 }
 
 // ─── Main Card ────────────────────────────────────────────────────────────────
-export function BookCard({
+function BookCardBase({
   book,
   variant = "grid",
   onPress,
@@ -308,3 +309,6 @@ export function BookCard({
     </TouchableOpacity>
   );
 }
+
+export const BookCard = memo(BookCardBase);
+export default BookCard;

@@ -14,11 +14,18 @@ import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
+import * as Location from "expo-location";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/theme";
 import { Button } from "@/components/ui/Button";
 import { booksApi } from "@/lib/api/books";
 import { queryClient } from "@/providers/QueryProvider";
+import { useNetworkStatus } from "@/hooks/useNetworkStatus";
+import {
+  requestCameraPermission,
+  requestMediaLibraryPermission,
+  requestLocationPermission,
+} from "@/lib/permissions";
 
 const CATEGORIES = [
   "উপন্যাস",
@@ -44,6 +51,7 @@ const CONDITIONS = [
 export default function BookUploadScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { isConnected } = useNetworkStatus();
 
   // Images
   const [coverImage, setCoverImage] = useState<string | null>(null);
@@ -77,8 +85,46 @@ export default function BookUploadScreen() {
   // Location
   const [district, setDistrict] = useState("ঢাকা");
   const [area, setArea] = useState("ধানমন্ডি");
+  const [detectingLocation, setDetectingLocation] = useState(false);
+  const [locationCoords, setLocationCoords] = useState<{ lat: string; lng: string }>({
+    lat: "23.8103",
+    lng: "90.4125",
+  });
 
   const [submitting, setSubmitting] = useState(false);
+
+  // GPS Location auto-detect
+  const handleDetectLocation = async () => {
+    setDetectingLocation(true);
+    try {
+      const perm = await requestLocationPermission();
+      if (!perm.granted) return;
+
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      setLocationCoords({
+        lat: String(loc.coords.latitude),
+        lng: String(loc.coords.longitude),
+      });
+
+      const reverse = await Location.reverseGeocodeAsync({
+        latitude: loc.coords.latitude,
+        longitude: loc.coords.longitude,
+      });
+
+      if (reverse && reverse.length > 0) {
+        const place = reverse[0];
+        const dist = place.city || place.subregion || place.region || district;
+        const ar = place.district || place.street || place.name || area;
+        if (dist) setDistrict(dist);
+        if (ar) setArea(ar);
+        Alert.alert("সফল", `আপনার অবস্থান শনাক্ত করা হয়েছে: ${ar}, ${dist}`);
+      }
+    } catch {
+      Alert.alert("ত্রুটি", "অবস্থান শনাক্ত করা সম্ভব হয়নি। ম্যানুয়ালি জেলা ও এলাকা লিখুন।");
+    } finally {
+      setDetectingLocation(false);
+    }
+  };
 
   // ISBN Lookup
   const handleIsbnLookup = async () => {
@@ -116,19 +162,57 @@ export default function BookUploadScreen() {
 
   // Pick cover photo
   const handlePickCover = async () => {
-    try {
-      const res = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ["images"],
-        allowsEditing: true,
-        aspect: [3, 4],
-        quality: 0.8,
-      });
-      if (!res.canceled && res.assets && res.assets.length > 0) {
-        setCoverImage(res.assets[0].uri);
+    if (Platform.OS === "web") {
+      try {
+        const res = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ["images"],
+          allowsEditing: true,
+          aspect: [3, 4],
+          quality: 0.8,
+        });
+        if (!res.canceled && res.assets && res.assets.length > 0) {
+          setCoverImage(res.assets[0].uri);
+        }
+      } catch {
+        Alert.alert("ত্রুটি", "ছবি নির্বাচন করা যায়নি।");
       }
-    } catch {
-      Alert.alert("ত্রুটি", "ছবি নির্বাচন করা যায়নি।");
+      return;
     }
+
+    Alert.alert("প্রচ্ছদ ছবি নির্বাচন", "কীভাবে ছবি যুক্ত করতে চান?", [
+      { text: "বাতিল", style: "cancel" },
+      {
+        text: "ক্যামেরা দিয়ে তুলুন",
+        onPress: async () => {
+          const perm = await requestCameraPermission();
+          if (!perm.granted) return;
+          const res = await ImagePicker.launchCameraAsync({
+            allowsEditing: true,
+            aspect: [3, 4],
+            quality: 0.8,
+          });
+          if (!res.canceled && res.assets && res.assets.length > 0) {
+            setCoverImage(res.assets[0].uri);
+          }
+        },
+      },
+      {
+        text: "গ্যালারি থেকে বেছে নিন",
+        onPress: async () => {
+          const perm = await requestMediaLibraryPermission();
+          if (!perm.granted) return;
+          const res = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ["images"],
+            allowsEditing: true,
+            aspect: [3, 4],
+            quality: 0.8,
+          });
+          if (!res.canceled && res.assets && res.assets.length > 0) {
+            setCoverImage(res.assets[0].uri);
+          }
+        },
+      },
+    ]);
   };
 
   // Pick additional photos
@@ -137,20 +221,60 @@ export default function BookUploadScreen() {
       Alert.alert("সতর্কতা", "সর্বোচ্চ ৩টি অতিরিক্ত ছবি যুক্ত করা যাবে।");
       return;
     }
-    try {
-      const res = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ["images"],
-        allowsMultipleSelection: true,
-        selectionLimit: 3 - galleryImages.length,
-        quality: 0.7,
-      });
-      if (!res.canceled && res.assets) {
-        const uris = res.assets.map((a) => a.uri);
-        setGalleryImages((prev) => [...prev, ...uris].slice(0, 3));
+
+    if (Platform.OS === "web") {
+      try {
+        const res = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ["images"],
+          allowsMultipleSelection: true,
+          selectionLimit: 3 - galleryImages.length,
+          quality: 0.7,
+        });
+        if (!res.canceled && res.assets) {
+          const uris = res.assets.map((a) => a.uri);
+          setGalleryImages((prev) => [...prev, ...uris].slice(0, 3));
+        }
+      } catch {
+        Alert.alert("ত্রুটি", "ছবি নির্বাচন করা যায়নি।");
       }
-    } catch {
-      Alert.alert("ত্রুটি", "ছবি নির্বাচন করা যায়নি।");
+      return;
     }
+
+    Alert.alert("অতিরিক্ত ছবি যুক্ত করুন", "কীভাবে ছবি নিতে চান?", [
+      { text: "বাতিল", style: "cancel" },
+      {
+        text: "ক্যামেরা দিয়ে তুলুন",
+        onPress: async () => {
+          const perm = await requestCameraPermission();
+          if (!perm.granted) return;
+          const res = await ImagePicker.launchCameraAsync({
+            allowsEditing: true,
+            aspect: [3, 4],
+            quality: 0.7,
+          });
+          if (!res.canceled && res.assets && res.assets.length > 0) {
+            setGalleryImages((prev) => [...prev, res.assets[0].uri].slice(0, 3));
+          }
+        },
+      },
+      {
+        text: "গ্যালারি থেকে বেছে নিন",
+        onPress: async () => {
+          const perm = await requestMediaLibraryPermission();
+          if (!perm.granted) return;
+          const res = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ["images"],
+            allowsMultipleSelection: true,
+            selectionLimit: 3 - galleryImages.length,
+            quality: 0.7,
+          });
+          if (!res.canceled && res.assets) {
+            const uris = res.assets.map((a) => a.uri);
+            setGalleryImages((prev) => [...prev, ...uris].slice(0, 3));
+          }
+        },
+      },
+    ]);
   };
 
   const removeGalleryImage = (index: number) => {
@@ -158,6 +282,13 @@ export default function BookUploadScreen() {
   };
 
   const handleSubmit = async () => {
+    if (!isConnected) {
+      Alert.alert(
+        "ইন্টারনেট সংযোগ নেই",
+        "বই আপলোড করতে সক্রিয় ইন্টারনেট সংযোগ প্রয়োজন। অনুগ্রহ করে আপনার নেটওয়ার্ক চেক করুন।"
+      );
+      return;
+    }
     if (!title.trim()) {
       Alert.alert("সতর্কতা", "বইয়ের নাম লিখুন।");
       return;
@@ -212,8 +343,8 @@ export default function BookUploadScreen() {
       // Location
       formData.append("locationType", "custom");
       formData.append("locationAddress", `${area}, ${district}`);
-      formData.append("locationLat", "23.8103");
-      formData.append("locationLng", "90.4125");
+      formData.append("locationLat", locationCoords.lat);
+      formData.append("locationLng", locationCoords.lng);
 
       // Cover Image (frontCover)
       const uriParts = coverImage.split(".");
@@ -689,9 +820,25 @@ export default function BookUploadScreen() {
         </View>
 
         {/* Section 4: Location & Notes */}
-        <Text className="text-sm font-semibold text-text-secondary uppercase tracking-wider mb-2">
-          ৪. অবস্থান ও বিস্তারিত বিবরণ
-        </Text>
+        <View className="flex-row items-center justify-between mb-2">
+          <Text className="text-sm font-semibold text-text-secondary uppercase tracking-wider">
+            ৪. অবস্থান ও বিস্তারিত বিবরণ
+          </Text>
+          <TouchableOpacity
+            onPress={handleDetectLocation}
+            disabled={detectingLocation}
+            className="flex-row items-center bg-primary/10 px-2.5 py-1 rounded-lg"
+          >
+            {detectingLocation ? (
+              <ActivityIndicator size="small" color={Colors.primary} />
+            ) : (
+              <>
+                <Ionicons name="locate" size={13} color={Colors.primary} />
+                <Text className="text-xs font-bold text-primary ml-1">জিপিএস অবস্থান নিন</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
         <View className="bg-white rounded-2xl p-4 border border-border mb-6">
           <View className="flex-row gap-3 mb-3">
             <View className="flex-1">
@@ -732,9 +879,15 @@ export default function BookUploadScreen() {
         style={{ paddingBottom: Math.max(insets.bottom, 12) }}
       >
         <Button
-          label={submitting ? "বই আপলোড হচ্ছে..." : "বই প্রকাশ করুন"}
+          label={
+            !isConnected
+              ? "অফলাইন"
+              : submitting
+              ? "বই আপলোড হচ্ছে..."
+              : "বই প্রকাশ করুন"
+          }
           loading={submitting}
-          disabled={submitting}
+          disabled={submitting || !isConnected}
           onPress={handleSubmit}
         />
       </View>

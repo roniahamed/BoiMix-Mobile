@@ -5,7 +5,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useLocalSearchParams } from "expo-router";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { FlashList } from "@shopify/flash-list";
@@ -99,10 +99,13 @@ export default function ExploreScreen() {
     if (hasNextPage && !isFetchingNextPage) fetchNextPage();
   };
 
-  const renderBook = ({ item }: { item: BookCardBook }) => (
-    <View className={viewMode === "grid" ? "px-1" : ""}>
-      <BookCard book={item} variant={viewMode} />
-    </View>
+  const renderBook = useCallback(
+    ({ item }: { item: BookCardBook }) => (
+      <View className={viewMode === "grid" ? "px-1" : ""}>
+        <BookCard book={item} variant={viewMode} />
+      </View>
+    ),
+    [viewMode]
   );
 
   const renderEmpty = () => {

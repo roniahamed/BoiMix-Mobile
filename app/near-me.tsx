@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   FlatList,
+  Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -17,6 +18,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/theme";
 import { booksApi } from "@/lib/api/books";
 import { BookCard } from "@/components/shared/BookCard";
+import { requestLocationPermission, openAppSettings } from "@/lib/permissions";
 import type { BookCardBook, BookAvailabilityMode } from "@/types/book";
 
 const RADIUS_OPTIONS = [5, 10, 25, 50] as const;
@@ -43,11 +45,14 @@ export default function NearMeScreen() {
   const [selectedMode, setSelectedMode] = useState<BookAvailabilityMode | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
+  const [canAskAgain, setCanAskAgain] = useState(true);
+
   const requestLocation = useCallback(async () => {
     setLocating(true);
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
+      const res = await requestLocationPermission({ showAlertOnDenial: false });
+      setCanAskAgain(res.canAskAgain);
+      if (!res.granted) {
         setPermissionDenied(true);
         // Fallback to Dhaka
         setCoords({ lat: 23.8103, lng: 90.4125 });
@@ -98,6 +103,15 @@ export default function NearMeScreen() {
     if (!selectedMode) return true;
     return b.availabilityMode === selectedMode;
   });
+
+  const renderBookItem = useCallback(
+    ({ item }: { item: BookCardBook }) => (
+      <View className="mb-3">
+        <BookCard book={item} variant="list" />
+      </View>
+    ),
+    []
+  );
 
   return (
     <View className="flex-1 bg-surface-dark">
@@ -192,19 +206,21 @@ export default function NearMeScreen() {
       </View>
 
       {/* Permission alert if denied */}
-      {permissionDenied && (
+      {permissionDenied ? (
         <View className="bg-warning/15 border-b border-warning/30 px-4 py-2.5 flex-row items-center justify-between">
           <View className="flex-row items-center flex-1 mr-2">
             <Ionicons name="alert-circle-outline" size={16} color={Colors.warning} />
             <Text className="text-xs text-text-primary ml-2 flex-1">
-              সঠিক দূরত্বের জন্য লোকেশন পারমিশন দিন
+              সঠিক দূরত্বের জন্য লোকেশন অনুমতি দিন
             </Text>
           </View>
-          <TouchableOpacity onPress={requestLocation}>
-            <Text className="text-xs font-bold text-primary">অনুমতি দিন</Text>
+          <TouchableOpacity onPress={canAskAgain ? requestLocation : openAppSettings}>
+            <Text className="text-xs font-bold text-primary">
+              {canAskAgain ? "অনুমতি দিন" : "সেটিংস খুলুন"}
+            </Text>
           </TouchableOpacity>
         </View>
-      )}
+      ) : null}
 
       {/* Book List / States */}
       {isLoading ? (
@@ -231,11 +247,11 @@ export default function NearMeScreen() {
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />
           }
-          renderItem={({ item }) => (
-            <View className="mb-3">
-              <BookCard book={item} variant="list" />
-            </View>
-          )}
+          renderItem={renderBookItem}
+          initialNumToRender={8}
+          maxToRenderPerBatch={10}
+          windowSize={5}
+          removeClippedSubviews={Platform.OS !== "web"}
           ListEmptyComponent={
             <View className="items-center py-20 px-6">
               <View className="w-16 h-16 rounded-full bg-surface-card border border-border items-center justify-center mb-3">

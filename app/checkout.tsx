@@ -17,6 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Button } from "@/components/ui/Button";
 import { useCartStore } from "@/stores/cart-store";
 import { useAuthStore } from "@/stores/auth-store";
+import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { ordersApi, type DeliveryAddress } from "@/lib/api/orders";
 import { paymentsApi } from "@/lib/api/payments";
 import * as WebBrowser from "expo-web-browser";
@@ -59,6 +60,7 @@ export default function CheckoutScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const user = useAuthStore((s) => s.user);
+  const { isConnected } = useNetworkStatus();
 
   const {
     getSelectedItems,
@@ -109,6 +111,13 @@ export default function CheckoutScreen() {
   };
 
   const handlePlaceOrder = async () => {
+    if (!isConnected) {
+      Alert.alert(
+        "ইন্টারনেট সংযোগ নেই",
+        "অর্ডার সম্পন্ন করতে ইন্টারনেট সংযোগ প্রয়োজন। অনুগ্রহ করে আপনার নেটওয়ার্ক চেক করুন।"
+      );
+      return;
+    }
     if (!validateForm()) return;
     setSubmitting(true);
 
@@ -505,9 +514,16 @@ export default function CheckoutScreen() {
         </View>
         <View className="w-1/2">
           <Button
-            label={submitting ? "প্রক্রিয়াধীন..." : "অর্ডার নিশ্চিত করুন"}
+            label={
+              !isConnected
+                ? "অফলাইন"
+                : submitting
+                ? "প্রক্রিয়াধীন..."
+                : "অর্ডার নিশ্চিত করুন"
+            }
             onPress={handlePlaceOrder}
             loading={submitting}
+            disabled={!isConnected || submitting}
           />
         </View>
       </View>

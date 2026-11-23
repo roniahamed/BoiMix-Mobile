@@ -6,10 +6,11 @@ import {
   FlatList,
   ActivityIndicator,
   ScrollView,
+  Platform,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
@@ -135,6 +136,11 @@ export default function SearchScreen() {
     await clearRecentSearches();
     setRecentSearches([]);
   };
+
+  const renderBookItem = useCallback(
+    ({ item }: { item: any }) => <BookCard book={item} variant="list" />,
+    []
+  );
 
   const showResults = submittedQuery.length > 0;
   const showSuggestions = query.length >= 2 && !submittedQuery && (suggestions?.length ?? 0) > 0;
@@ -278,7 +284,11 @@ export default function SearchScreen() {
           data={results ?? []}
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ padding: 16, gap: 10 }}
-          renderItem={({ item }) => <BookCard book={item} variant="list" />}
+          renderItem={renderBookItem}
+          initialNumToRender={8}
+          maxToRenderPerBatch={10}
+          windowSize={5}
+          removeClippedSubviews={Platform.OS !== "web"}
           ListEmptyComponent={
             <View className="items-center py-20 bg-white rounded-2xl border border-border-light mx-4 my-8 p-6">
               <View className="w-16 h-16 rounded-full bg-surface-dark items-center justify-center mb-3">

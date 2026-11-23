@@ -16,6 +16,7 @@ import { Colors } from "@/constants/theme";
 import { useAuthStore } from "@/stores/auth-store";
 import { authApi } from "@/lib/api/auth";
 import { queryClient } from "@/providers/QueryProvider";
+import { openAppSettings } from "@/lib/permissions";
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -219,6 +220,20 @@ export default function SettingsScreen() {
             </View>
             <Text className="flex-1 text-sm font-semibold text-text-primary">ভাষা (Language)</Text>
             <Text className="text-xs text-text-muted mr-1.5">বাংলা</Text>
+            <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={openAppSettings}
+            className="flex-row items-center p-3.5 border-b border-slate-100"
+          >
+            <View className="w-8 h-8 rounded-lg bg-blue-50 items-center justify-center mr-3">
+              <Ionicons name="shield-checkmark-outline" size={18} color="#2563EB" />
+            </View>
+            <Text className="flex-1 text-sm font-semibold text-text-primary">
+              অ্যাপের অনুমতিসমূহ (Permissions)
+            </Text>
+            <Text className="text-xs text-text-muted mr-1.5">লোকেশন, ক্যামেরা</Text>
             <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />
           </TouchableOpacity>
 

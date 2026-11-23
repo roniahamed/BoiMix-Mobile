@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import { View, FlatList, Text, TouchableOpacity } from "react-native";
 import { BookCard, BookCardSkeleton } from "@/components/shared/BookCard";
 import { SectionHeader } from "@/components/home/SectionHeader";
@@ -20,6 +21,11 @@ export function BookHorizontalList({
   onRetry,
   seeAllRoute,
 }: Props) {
+  const renderBookItem = useCallback(
+    ({ item }: { item: BookCardBook }) => <BookCard book={item} variant="horizontal" />,
+    []
+  );
+
   if (error) {
     return (
       <View className="mb-5">
@@ -63,7 +69,10 @@ export function BookHorizontalList({
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 16 }}
-        renderItem={({ item }) => <BookCard book={item} variant="horizontal" />}
+        renderItem={renderBookItem}
+        initialNumToRender={5}
+        maxToRenderPerBatch={5}
+        windowSize={3}
       />
     </View>
   );
