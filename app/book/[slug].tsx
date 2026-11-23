@@ -267,6 +267,17 @@ export default function BookDetailScreen() {
     }
   };
 
+  const handleViewSellerProfile = () => {
+    const targetUsername =
+      (book as any)?.owner?.username ||
+      (book as any)?.sellerUsername ||
+      (book as any)?.owner?.id ||
+      book?.sellerId;
+    if (targetUsername) {
+      router.push(`/user/${targetUsername}` as never);
+    }
+  };
+
   const handleOpenPdfPreview = async () => {
     if (!book) return;
     const rawPdf = book.previewPdfUrl || (book as any).preview_pdf_url;
@@ -637,19 +648,34 @@ export default function BookDetailScreen() {
           {Boolean((book as any).owner || book.sellerId) ? (
             <View className="mb-5 p-4 rounded-2xl bg-surface-dark border border-border-light">
               <View className="flex-row items-center justify-between">
-                <View className="flex-row items-center flex-1 mr-2">
-                  <View className="w-12 h-12 rounded-full bg-primary/10 items-center justify-center mr-3">
-                    <Ionicons name="person" size={24} color={Colors.primary} />
+                <TouchableOpacity
+                  onPress={handleViewSellerProfile}
+                  activeOpacity={0.7}
+                  className="flex-row items-center flex-1 mr-2"
+                >
+                  <View className="w-12 h-12 rounded-full bg-primary/10 items-center justify-center mr-3 overflow-hidden border border-primary/20">
+                    {(book as any).owner?.avatarUrl ? (
+                      <Image
+                        source={{ uri: resolveMediaUrl((book as any).owner.avatarUrl) }}
+                        style={{ width: "100%", height: "100%" }}
+                        contentFit="cover"
+                      />
+                    ) : (
+                      <Ionicons name="person" size={24} color={Colors.primary} />
+                    )}
                   </View>
                   <View className="flex-1">
-                    <Text className="text-sm font-bold text-text-primary" numberOfLines={1}>
-                      {(book as any).owner?.name || (book as any).sellerName || "বইবিক্রেতা"}
-                    </Text>
-                    <Text className="text-xs text-text-muted">
+                    <View className="flex-row items-center gap-1">
+                      <Text className="text-sm font-bold text-text-primary" numberOfLines={1}>
+                        {(book as any).owner?.name || (book as any).sellerName || "বইবিক্রেতা"}
+                      </Text>
+                      <Ionicons name="chevron-forward" size={14} color={Colors.textMuted} />
+                    </View>
+                    <Text className="text-xs text-text-muted mt-0.5">
                       {(book as any).owner?.location || book.location || "বাংলাদেশ"}
                     </Text>
                   </View>
-                </View>
+                </TouchableOpacity>
                 {!isOwner ? (
                   <TouchableOpacity
                     onPress={handleMessageOwner}
@@ -667,9 +693,17 @@ export default function BookDetailScreen() {
           {/* More from Seller */}
           {sellerBooks && sellerBooks.length > 0 ? (
             <View className="mb-5">
-              <Text className="text-sm font-semibold text-text-primary mb-3">
-                এই বিক্রেতার আরো বই
-              </Text>
+              <View className="flex-row items-center justify-between mb-3">
+                <Text className="text-sm font-semibold text-text-primary">
+                  এই বিক্রেতার আরো বই
+                </Text>
+                <TouchableOpacity
+                  onPress={handleViewSellerProfile}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Text className="text-xs font-semibold text-primary">সব দেখুন</Text>
+                </TouchableOpacity>
+              </View>
               {sellerBooks.slice(0, 3).map((b) => (
                 <BookCard key={b.id} book={b} variant="list" />
               ))}

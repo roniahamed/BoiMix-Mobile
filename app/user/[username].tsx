@@ -15,6 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/theme";
 import { usersApi } from "@/lib/api/users";
 import { BookCard } from "@/components/shared/BookCard";
+import { resolveMediaUrl } from "@/lib/utils/media";
 import type { UserProfile } from "@/types/user";
 import type { BookCardBook } from "@/types/book";
 
@@ -40,12 +41,13 @@ export default function UserPublicProfileScreen() {
   });
 
   // Fetch user's books
+  const queryUser = profile?.username || username;
   const { data: userBooksData, isLoading: isLoadingBooks } = useQuery<BookCardBook[]>({
-    queryKey: ["user-books", username],
+    queryKey: ["user-books", queryUser],
     queryFn: async () => {
       try {
-        if (username) {
-          const res = await usersApi.getUserBooks(username);
+        if (queryUser) {
+          const res = await usersApi.getUserBooks(queryUser);
           return res.data?.results || [];
         }
       } catch {
@@ -53,9 +55,21 @@ export default function UserPublicProfileScreen() {
       }
       return [];
     },
+    enabled: Boolean(queryUser),
   });
 
   const [isFollowing, setIsFollowing] = useState(profile?.isFollowing || false);
+
+  const formatJoinedDate = (dateStr?: string) => {
+    if (!dateStr) return "সম্প্রতি";
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      return d.toLocaleDateString("bn-BD", { year: "numeric", month: "long" });
+    } catch {
+      return dateStr;
+    }
+  };
 
   const followMutation = useMutation({
     mutationFn: async () => {
@@ -106,7 +120,11 @@ export default function UserPublicProfileScreen() {
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Cover Image */}
         <Image
-          source={{ uri: profile.coverUrl || "https://images.unsplash.com/photo-1507842229458-7629a1b8ddec?w=800" }}
+          source={{
+            uri: profile.coverUrl
+              ? resolveMediaUrl(profile.coverUrl)
+              : "https://images.unsplash.com/photo-1507842229458-7629a1b8ddec?w=800",
+          }}
           style={{ width: "100%", height: 160 }}
           contentFit="cover"
         />
@@ -115,7 +133,11 @@ export default function UserPublicProfileScreen() {
         <View className="px-5 -mt-12">
           <View className="flex-row items-end justify-between">
             <Image
-              source={{ uri: profile.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400" }}
+              source={{
+                uri: profile.avatarUrl
+                  ? resolveMediaUrl(profile.avatarUrl)
+                  : "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400",
+              }}
               style={{ width: 88, height: 88, borderRadius: 44, borderWidth: 4, borderColor: "#FFF" }}
               contentFit="cover"
             />
@@ -188,7 +210,7 @@ export default function UserPublicProfileScreen() {
               ) : null}
               <View className="flex-row items-center">
                 <Ionicons name="calendar-outline" size={14} color={Colors.textMuted} />
-                <Text className="text-xs text-text-muted ml-1">যুক্ত হয়েছেন {profile.joinedAt}</Text>
+                <Text className="text-xs text-text-muted ml-1">যুক্ত হয়েছেন {formatJoinedDate(profile.joinedAt)}</Text>
               </View>
             </View>
           </View>

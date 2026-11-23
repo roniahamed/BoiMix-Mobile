@@ -19,6 +19,9 @@ import { BookHorizontalList } from "@/components/home/BookHorizontalList";
 import { booksApi } from "@/lib/api/books";
 import { queryKeys } from "@/lib/api/query-keys";
 import { Colors } from "@/constants/theme";
+import { useCartStore } from "@/stores/cart-store";
+import { useAuthStore } from "@/stores/auth-store";
+import { notificationsApi } from "@/lib/api/notifications";
 
 const QUICK_ACTIONS = [
   { label: "বিক্রয়", iconName: "pricetag-outline" as const, mode: "sell" },
@@ -54,6 +57,17 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationDenied, setLocationDenied] = useState(false);
+
+  const user = useAuthStore((s) => s.user);
+  const cartCount = useCartStore((s) => s.items.reduce((sum, i) => sum + i.quantity, 0));
+
+  const { data: notifSummary } = useQuery({
+    queryKey: ["notifications-summary"],
+    queryFn: () => notificationsApi.getSummary(),
+    enabled: !!user,
+    select: (res) => res.data,
+  });
+  const unreadNotifs = notifSummary?.unread_notifications_count ?? 0;
 
   const { data: trendingData, isLoading: trendingLoading, isError: trendingError, refetch: refetchTrending } = useQuery({
     queryKey: queryKeys.books.trending(),
@@ -144,12 +158,30 @@ export default function HomeScreen() {
           <TouchableOpacity onPress={() => router.push("/messages" as never)} className="w-9 h-9 bg-surface-dark rounded-xl items-center justify-center">
             <Ionicons name="chatbubble-ellipses-outline" size={19} color={Colors.textPrimary} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => router.push("/notifications" as never)} className="w-9 h-9 bg-surface-dark rounded-xl items-center justify-center">
-            <Ionicons name="notifications-outline" size={19} color={Colors.textPrimary} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => router.push("/cart" as never)} className="w-9 h-9 bg-surface-dark rounded-xl items-center justify-center">
-            <Ionicons name="cart-outline" size={19} color={Colors.textPrimary} />
-          </TouchableOpacity>
+          <View className="relative">
+            <TouchableOpacity onPress={() => router.push("/notifications" as never)} className="w-9 h-9 bg-surface-dark rounded-xl items-center justify-center">
+              <Ionicons name="notifications-outline" size={19} color={Colors.textPrimary} />
+            </TouchableOpacity>
+            {unreadNotifs > 0 ? (
+              <View className="absolute -top-1 -right-1 bg-rose-600 min-w-[16px] h-4 rounded-full items-center justify-center px-1 border border-white">
+                <Text className="text-[9px] font-bold text-white">
+                  {unreadNotifs > 9 ? "9+" : unreadNotifs}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+          <View className="relative">
+            <TouchableOpacity onPress={() => router.push("/cart" as never)} className="w-9 h-9 bg-surface-dark rounded-xl items-center justify-center">
+              <Ionicons name="cart-outline" size={19} color={Colors.textPrimary} />
+            </TouchableOpacity>
+            {cartCount > 0 ? (
+              <View className="absolute -top-1 -right-1 bg-primary min-w-[16px] h-4 rounded-full items-center justify-center px-1 border border-white">
+                <Text className="text-[9px] font-bold text-white">
+                  {cartCount > 9 ? "9+" : cartCount}
+                </Text>
+              </View>
+            ) : null}
+          </View>
         </View>
       </View>
 

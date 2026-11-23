@@ -143,7 +143,7 @@ export default function SellTabScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            onPress={() => router.push("/tabs/profile")}
+            onPress={() => router.push("/profile/my-books")}
             className="flex-row items-center p-4"
           >
             <Ionicons name="library-outline" size={20} color={Colors.textSecondary} className="mr-3" />

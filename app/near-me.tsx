@@ -64,7 +64,20 @@ export default function NearMeScreen() {
         accuracy: Location.Accuracy.Balanced,
       });
       setCoords({ lat: loc.coords.latitude, lng: loc.coords.longitude });
-      setLocationName("আপনার বর্তমান অবস্থান");
+      try {
+        const [geo] = await Location.reverseGeocodeAsync({
+          latitude: loc.coords.latitude,
+          longitude: loc.coords.longitude,
+        });
+        if (geo) {
+          const area = geo.subregion || geo.district || geo.city || geo.name || "";
+          setLocationName(area ? `${area}, ${geo.city || "বাংলাদেশ"}` : "আপনার বর্তমান অবস্থান");
+        } else {
+          setLocationName("আপনার বর্তমান অবস্থান");
+        }
+      } catch {
+        setLocationName("আপনার বর্তমান অবস্থান");
+      }
     } catch {
       setCoords({ lat: 23.8103, lng: 90.4125 });
       setLocationName("ঢাকা (ডিফল্ট)");

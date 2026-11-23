@@ -192,7 +192,14 @@ export default function ExchangeProposeScreen() {
                   }`}
                 >
                   <Image
-                    source={{ uri: resolveMediaUrl(book.coverUrl || (book as any).coverImage) }}
+                    source={{
+                      uri: resolveMediaUrl(
+                        book.coverUrl ||
+                          (book as any).cover_image_url ||
+                          (book as any).cover_image ||
+                          (book as any).coverImage
+                      ),
+                    }}
                     style={{ width: 48, height: 64, borderRadius: 6 }}
                     contentFit="cover"
                   />

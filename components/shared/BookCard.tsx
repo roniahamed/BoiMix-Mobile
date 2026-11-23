@@ -100,6 +100,16 @@ function StarRating({ rating, count }: { rating: number; count: number }) {
   );
 }
 
+function getCoverUrl(book: BookCardBook): string {
+  const url =
+    book.coverUrl ||
+    (book as any).cover_image_url ||
+    (book as any).cover_image ||
+    (book as any).coverImage ||
+    (book as any).image;
+  return resolveMediaUrl(url);
+}
+
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 export function BookCardSkeleton({ variant = "grid" }: { variant?: Variant }) {
   if (variant === "horizontal") {
@@ -129,6 +139,12 @@ function BookCardBase({
 }: BookCardProps) {
   const router = useRouter();
   const isOutOfStock = book.isOutOfStock || book.availability === "out-of-stock";
+  const price = Number(book.price ?? 0);
+  const origPrice = Number(book.originalPrice ?? 0);
+  const discountPercent =
+    origPrice > price && price > 0
+      ? Math.round(((origPrice - price) / origPrice) * 100)
+      : 0;
 
   const handlePress = () => {
     if (onPress) return onPress();
@@ -148,11 +164,16 @@ function BookCardBase({
       >
         <View className="relative mb-2">
           <Image
-            source={{ uri: resolveMediaUrl(book.coverUrl) }}
+            source={{ uri: getCoverUrl(book) }}
             style={{ width: 128, height: 180, borderRadius: 12 }}
             contentFit="cover"
             transition={200}
           />
+          {discountPercent >= 5 && (
+            <View className="absolute bottom-1.5 left-1.5 bg-rose-600 rounded px-1.5 py-0.5 shadow-xs">
+              <Text className="text-[10px] font-bold text-white">-{discountPercent}%</Text>
+            </View>
+          )}
           {isOutOfStock && (
             <View className="absolute inset-0 bg-black/40 rounded-xl items-center justify-center">
               <Text className="text-white text-xs font-bold">স্টক নেই</Text>
@@ -197,7 +218,7 @@ function BookCardBase({
         className="flex-row bg-white border border-border rounded-xl p-3 mb-3 shadow-sm"
       >
         <Image
-          source={{ uri: resolveMediaUrl(book.coverUrl) }}
+          source={{ uri: getCoverUrl(book) }}
           style={{ width: 72, height: 100, borderRadius: 8 }}
           contentFit="cover"
           transition={200}
@@ -238,11 +259,17 @@ function BookCardBase({
       {/* Cover */}
       <View className="relative mb-2">
         <Image
-          source={{ uri: resolveMediaUrl(book.coverUrl) }}
+          source={{ uri: getCoverUrl(book) }}
           style={{ width: "100%", height: GRID_CARD_WIDTH * 1.35, borderRadius: 10 }}
           contentFit="cover"
           transition={200}
         />
+
+        {discountPercent >= 5 && (
+          <View className="absolute bottom-2 left-2 bg-rose-600 rounded px-1.5 py-0.5 shadow-xs">
+            <Text className="text-[10px] font-bold text-white">-{discountPercent}%</Text>
+          </View>
+        )}
 
         {isOutOfStock && (
           <View className="absolute inset-0 bg-black/40 rounded-xl items-center justify-center">
