@@ -16,6 +16,7 @@ import { Colors } from "@/constants/theme";
 import { usersApi } from "@/lib/api/users";
 import { BookCard } from "@/components/shared/BookCard";
 import { resolveMediaUrl } from "@/lib/utils/media";
+import { shareContent } from "@/lib/utils/share";
 import type { UserProfile } from "@/types/user";
 import type { BookCardBook } from "@/types/book";
 
@@ -96,6 +97,21 @@ export default function UserPublicProfileScreen() {
 
   const userBooks = userBooksData ?? [];
 
+  const handleShareProfile = async () => {
+    if (!profile) return;
+    const name = profile.name || profile.username || "ব্যবহারকারী";
+    const url =
+      typeof window !== "undefined" && window.location?.origin
+        ? `${window.location.origin}/user/${username}`
+        : `https://boimix.com/user/${username}`;
+    await shareContent({
+      title: `${name} - BoiMix`,
+      message: `BoiMix-এ ${name}-এর প্রোফাইল দেখুন:`,
+      url,
+      successMessage: `${name}-এর প্রোফাইল লিংক ক্লিপবোর্ডে কপি করা হয়েছে।`,
+    });
+  };
+
   return (
     <View className="flex-1 bg-surface-background">
       {/* Top Floating Back Button */}
@@ -110,7 +126,7 @@ export default function UserPublicProfileScreen() {
           <Ionicons name="arrow-back" size={20} color="#FFF" />
         </TouchableOpacity>
         <TouchableOpacity
-          onPress={() => Alert.alert("শেয়ার", "প্রোফাইল লিংক কপি করা হয়েছে।")}
+          onPress={handleShareProfile}
           className="w-10 h-10 rounded-full bg-black/40 items-center justify-center"
         >
           <Ionicons name="share-social-outline" size={20} color="#FFF" />

@@ -51,17 +51,42 @@ function promptGoogleLoginWeb(): Promise<string> {
         throw new Error("গুগল আইডেন্টিটি সার্ভিস লোড হতে ব্যর্থ হয়েছে।");
       }
 
+      let settled = false;
+
       const tokenClient = google.accounts.oauth2.initTokenClient({
         client_id: GOOGLE_CLIENT_ID,
         scope: "openid email profile",
         prompt: "select_account",
         callback: (response: any) => {
+          if (settled) return;
+          settled = true;
           if (response.error) {
-            reject(new Error(response.error_description || response.error));
+            const errStr = response.error_description || response.error;
+            if (errStr.includes("origin_mismatch")) {
+              reject(
+                new Error(
+                  "Google OAuth Origin Mismatch: Google Cloud Console-এর Authorized JavaScript origins-এ বর্তমান পোর্ট যোগ করতে হবে।"
+                )
+              );
+            } else {
+              reject(new Error(errStr));
+            }
           } else if (response.access_token) {
             resolve(response.access_token);
           } else {
             reject(new Error("গুগল থেকে অ্যাক্সেস টোকেন পাওয়া যায়নি।"));
+          }
+        },
+        error_callback: (error: any) => {
+          if (settled) return;
+          settled = true;
+          const type = error?.type || "";
+          if (type === "popup_closed") {
+            reject(new Error("Google সাইন ইন বাতিল করা হয়েছে।"));
+          } else if (type === "popup_failed_to_open") {
+            reject(new Error("ব্রাউজারে পপআপ ব্লক করা হয়েছে। অনুগ্রহ করে পপআপ অনুমোদন করুন।"));
+          } else {
+            reject(new Error(error?.message || "Google সাইন ইন সম্পন্ন করা যায়নি।"));
           }
         },
       });

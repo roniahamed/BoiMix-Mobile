@@ -5,7 +5,6 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Share,
   Alert,
   Modal,
   TextInput,
@@ -32,6 +31,7 @@ import { Colors } from "@/constants/theme";
 import { resolveMediaUrl } from "@/lib/utils/media";
 import { wishlistApi } from "@/lib/api/wishlist";
 import { reviewsApi, type BookReviewItem } from "@/lib/api/reviews";
+import { shareContent } from "@/lib/utils/share";
 
 export default function BookDetailScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
@@ -301,9 +301,15 @@ export default function BookDetailScreen() {
 
   const handleShare = async () => {
     if (!book) return;
-    await Share.share({
-      message: `BoiMix-এ "${book.title}" দেখুন`,
+    const url =
+      typeof window !== "undefined" && window.location?.origin
+        ? `${window.location.origin}/book/${book.slug}`
+        : `https://boimix.com/book/${book.slug}`;
+    await shareContent({
       title: book.title,
+      message: `BoiMix-এ "${book.title}" বইটি দেখুন:`,
+      url,
+      successMessage: `"${book.title}" বইটির লিংক ক্লিপবোর্ডে কপি করা হয়েছে।`,
     });
   };
 
