@@ -180,11 +180,17 @@ export default function CartScreen() {
                   </TouchableOpacity>
 
                   {/* Cover */}
-                  <Image
-                    source={{ uri: resolveMediaUrl(book.coverUrl) }}
-                    style={{ width: 56, height: 76, borderRadius: 8 }}
-                    contentFit="cover"
-                  />
+                  {Boolean(resolveMediaUrl(book.coverUrl || (book as any).cover_image_url || (book as any).coverImage)) ? (
+                    <Image
+                      source={{ uri: resolveMediaUrl(book.coverUrl || (book as any).cover_image_url || (book as any).coverImage) }}
+                      style={{ width: 56, height: 76, borderRadius: 8 }}
+                      contentFit="cover"
+                    />
+                  ) : (
+                    <View style={{ width: 56, height: 76, borderRadius: 8 }} className="bg-slate-100 items-center justify-center border border-slate-200">
+                      <Ionicons name="book-outline" size={24} color={Colors.textMuted} />
+                    </View>
+                  )}
 
                   {/* Details */}
                   <View className="flex-1 ml-3 justify-between">

@@ -145,6 +145,7 @@ function BookCardBase({
     origPrice > price && price > 0
       ? Math.round(((origPrice - price) / origPrice) * 100)
       : 0;
+  const coverUri = getCoverUrl(book);
 
   const handlePress = () => {
     if (onPress) return onPress();
@@ -163,12 +164,22 @@ function BookCardBase({
         className="w-32 mr-3"
       >
         <View className="relative mb-2">
-          <Image
-            source={{ uri: getCoverUrl(book) }}
-            style={{ width: 128, height: 180, borderRadius: 12 }}
-            contentFit="cover"
-            transition={200}
-          />
+          {coverUri ? (
+            <Image
+              source={{ uri: coverUri }}
+              style={{ width: 128, height: 180, borderRadius: 12 }}
+              contentFit="cover"
+              transition={200}
+            />
+          ) : (
+            <View
+              style={{ width: 128, height: 180, borderRadius: 12 }}
+              className="bg-slate-100 items-center justify-center border border-slate-200"
+            >
+              <Ionicons name="book-outline" size={36} color={Colors.textMuted} />
+              <Text className="text-[10px] text-text-muted mt-1.5 font-medium">প্রচ্ছদ নেই</Text>
+            </View>
+          )}
           {discountPercent >= 5 && (
             <View className="absolute bottom-1.5 left-1.5 bg-rose-600 rounded px-1.5 py-0.5 shadow-xs">
               <Text className="text-[10px] font-bold text-white">-{discountPercent}%</Text>
@@ -217,12 +228,22 @@ function BookCardBase({
         activeOpacity={0.85}
         className="flex-row bg-white border border-border rounded-xl p-3 mb-3 shadow-sm"
       >
-        <Image
-          source={{ uri: getCoverUrl(book) }}
-          style={{ width: 72, height: 100, borderRadius: 8 }}
-          contentFit="cover"
-          transition={200}
-        />
+        {coverUri ? (
+          <Image
+            source={{ uri: coverUri }}
+            style={{ width: 72, height: 100, borderRadius: 8 }}
+            contentFit="cover"
+            transition={200}
+          />
+        ) : (
+          <View
+            style={{ width: 72, height: 100, borderRadius: 8 }}
+            className="bg-slate-100 items-center justify-center border border-slate-200"
+          >
+            <Ionicons name="book-outline" size={24} color={Colors.textMuted} />
+            <Text className="text-[9px] text-text-muted mt-1 font-medium">প্রচ্ছদ নেই</Text>
+          </View>
+        )}
         <View className="flex-1 ml-3 justify-between">
           <View>
             <Text className="text-sm font-semibold text-text-primary leading-5" numberOfLines={2}>
@@ -258,12 +279,22 @@ function BookCardBase({
     >
       {/* Cover */}
       <View className="relative mb-2">
-        <Image
-          source={{ uri: getCoverUrl(book) }}
-          style={{ width: "100%", height: GRID_CARD_WIDTH * 1.35, borderRadius: 10 }}
-          contentFit="cover"
-          transition={200}
-        />
+        {coverUri ? (
+          <Image
+            source={{ uri: coverUri }}
+            style={{ width: "100%", height: GRID_CARD_WIDTH * 1.35, borderRadius: 10 }}
+            contentFit="cover"
+            transition={200}
+          />
+        ) : (
+          <View
+            style={{ width: "100%", height: GRID_CARD_WIDTH * 1.35, borderRadius: 10 }}
+            className="bg-slate-100 items-center justify-center border border-slate-200"
+          >
+            <Ionicons name="book-outline" size={40} color={Colors.textMuted} />
+            <Text className="text-[11px] text-text-muted mt-1.5 font-medium">প্রচ্ছদ নেই</Text>
+          </View>
+        )}
 
         {discountPercent >= 5 && (
           <View className="absolute bottom-2 left-2 bg-rose-600 rounded px-1.5 py-0.5 shadow-xs">

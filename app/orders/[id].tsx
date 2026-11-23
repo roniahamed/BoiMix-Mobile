@@ -308,11 +308,17 @@ export default function OrderTrackingDetailScreen() {
               key={item.id}
               className="flex-row items-center py-2.5 border-b border-border-light last:border-b-0"
             >
-              <Image
-                source={{ uri: resolveMediaUrl(item.book?.coverUrl) }}
-                style={{ width: 44, height: 60, borderRadius: 6 }}
-                contentFit="cover"
-              />
+              {Boolean(resolveMediaUrl(item.book?.coverUrl || (item.book as any)?.cover_image_url || (item.book as any)?.coverImage)) ? (
+                <Image
+                  source={{ uri: resolveMediaUrl(item.book?.coverUrl || (item.book as any)?.cover_image_url || (item.book as any)?.coverImage) }}
+                  style={{ width: 44, height: 60, borderRadius: 6 }}
+                  contentFit="cover"
+                />
+              ) : (
+                <View style={{ width: 44, height: 60, borderRadius: 6 }} className="bg-slate-100 items-center justify-center border border-slate-200">
+                  <Ionicons name="book-outline" size={20} color={Colors.textMuted} />
+                </View>
+              )}
               <View className="flex-1 ml-3.5">
                 <Text className="text-sm font-semibold text-text-primary" numberOfLines={1}>
                   {item.book?.title}

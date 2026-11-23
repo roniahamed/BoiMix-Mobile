@@ -191,18 +191,34 @@ export default function ExchangeProposeScreen() {
                     isSelected ? "border-primary bg-primary/5" : "border-border"
                   }`}
                 >
-                  <Image
-                    source={{
-                      uri: resolveMediaUrl(
-                        book.coverUrl ||
-                          (book as any).cover_image_url ||
-                          (book as any).cover_image ||
-                          (book as any).coverImage
-                      ),
-                    }}
-                    style={{ width: 48, height: 64, borderRadius: 6 }}
-                    contentFit="cover"
-                  />
+                  {Boolean(
+                    resolveMediaUrl(
+                      book.coverUrl ||
+                        (book as any).cover_image_url ||
+                        (book as any).cover_image ||
+                        (book as any).coverImage
+                    )
+                  ) ? (
+                    <Image
+                      source={{
+                        uri: resolveMediaUrl(
+                          book.coverUrl ||
+                            (book as any).cover_image_url ||
+                            (book as any).cover_image ||
+                            (book as any).coverImage
+                        ),
+                      }}
+                      style={{ width: 48, height: 64, borderRadius: 6 }}
+                      contentFit="cover"
+                    />
+                  ) : (
+                    <View
+                      style={{ width: 48, height: 64, borderRadius: 6 }}
+                      className="bg-slate-100 items-center justify-center border border-slate-200"
+                    >
+                      <Ionicons name="book-outline" size={20} color={Colors.textMuted} />
+                    </View>
+                  )}
                   <View className="flex-1 ml-3">
                     <Text className="text-sm font-bold text-text-primary" numberOfLines={1}>
                       {book.title}

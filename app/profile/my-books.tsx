@@ -151,11 +151,24 @@ export default function MyBooksScreen() {
                   activeOpacity={0.8}
                   className="bg-white rounded-2xl p-4 mb-3 border border-border-light shadow-sm flex-row items-center"
                 >
-                  <Image
-                    source={{ uri: resolveMediaUrl(item.coverUrl || (item as any).coverImage) }}
-                    style={{ width: 56, height: 76, borderRadius: 8 }}
-                    contentFit="cover"
-                  />
+                  {Boolean(resolveMediaUrl(item.coverUrl || (item as any).cover_image_url || (item as any).cover_image || (item as any).coverImage)) ? (
+                    <Image
+                      source={{
+                        uri: resolveMediaUrl(
+                          item.coverUrl ||
+                            (item as any).cover_image_url ||
+                            (item as any).cover_image ||
+                            (item as any).coverImage
+                        ),
+                      }}
+                      style={{ width: 56, height: 76, borderRadius: 8 }}
+                      contentFit="cover"
+                    />
+                  ) : (
+                    <View style={{ width: 56, height: 76, borderRadius: 8 }} className="bg-slate-100 items-center justify-center border border-slate-200">
+                      <Ionicons name="book-outline" size={24} color={Colors.textMuted} />
+                    </View>
+                  )}
                   <View className="flex-1 ml-3.5">
                     <Text className="text-sm font-bold text-text-primary" numberOfLines={1}>
                       {item.title}

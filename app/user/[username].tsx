@@ -119,28 +119,35 @@ export default function UserPublicProfileScreen() {
 
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Cover Image */}
-        <Image
-          source={{
-            uri: profile.coverUrl
-              ? resolveMediaUrl(profile.coverUrl)
-              : "https://images.unsplash.com/photo-1507842229458-7629a1b8ddec?w=800",
-          }}
-          style={{ width: "100%", height: 160 }}
-          contentFit="cover"
-        />
+        {profile.coverUrl && resolveMediaUrl(profile.coverUrl) ? (
+          <Image
+            source={{ uri: resolveMediaUrl(profile.coverUrl) }}
+            style={{ width: "100%", height: 160 }}
+            contentFit="cover"
+          />
+        ) : (
+          <View style={{ width: "100%", height: 140 }} className="bg-primary/10 items-center justify-center border-b border-border-light">
+            <Ionicons name="book-outline" size={48} color={Colors.primary} style={{ opacity: 0.2 }} />
+          </View>
+        )}
 
         {/* Profile Card Overlay */}
         <View className="px-5 -mt-12">
           <View className="flex-row items-end justify-between">
-            <Image
-              source={{
-                uri: profile.avatarUrl
-                  ? resolveMediaUrl(profile.avatarUrl)
-                  : "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400",
-              }}
-              style={{ width: 88, height: 88, borderRadius: 44, borderWidth: 4, borderColor: "#FFF" }}
-              contentFit="cover"
-            />
+            {profile.avatarUrl && resolveMediaUrl(profile.avatarUrl) ? (
+              <Image
+                source={{ uri: resolveMediaUrl(profile.avatarUrl) }}
+                style={{ width: 88, height: 88, borderRadius: 44, borderWidth: 4, borderColor: "#FFF" }}
+                contentFit="cover"
+              />
+            ) : (
+              <View
+                style={{ width: 88, height: 88, borderRadius: 44, borderWidth: 4, borderColor: "#FFF" }}
+                className="bg-primary/10 items-center justify-center shadow-xs"
+              >
+                <Ionicons name="person" size={42} color={Colors.primary} />
+              </View>
+            )}
             {/* Follow & Message Buttons */}
             <View className="flex-row gap-2 mb-2">
               <TouchableOpacity

@@ -230,11 +230,17 @@ export default function OrdersScreen() {
 
                     {item.items?.map((orderItem) => (
                       <View key={orderItem.id} className="flex-row items-center py-1.5">
-                        <Image
-                          source={{ uri: resolveMediaUrl(orderItem.book?.coverUrl) }}
-                          style={{ width: 40, height: 56, borderRadius: 6 }}
-                          contentFit="cover"
-                        />
+                        {Boolean(resolveMediaUrl(orderItem.book?.coverUrl || (orderItem.book as any)?.cover_image_url || (orderItem.book as any)?.coverImage)) ? (
+                          <Image
+                            source={{ uri: resolveMediaUrl(orderItem.book?.coverUrl || (orderItem.book as any)?.cover_image_url || (orderItem.book as any)?.coverImage) }}
+                            style={{ width: 40, height: 56, borderRadius: 6 }}
+                            contentFit="cover"
+                          />
+                        ) : (
+                          <View style={{ width: 40, height: 56, borderRadius: 6 }} className="bg-slate-100 items-center justify-center border border-slate-200">
+                            <Ionicons name="book-outline" size={18} color={Colors.textMuted} />
+                          </View>
+                        )}
                         <View className="flex-1 ml-3">
                           <Text className="text-sm font-semibold text-text-primary" numberOfLines={1}>
                             {orderItem.book?.title}
@@ -302,11 +308,17 @@ export default function OrdersScreen() {
               </View>
 
               <View className="flex-row items-center py-1.5">
-                <Image
-                  source={{ uri: resolveMediaUrl(item.book?.coverUrl) }}
-                  style={{ width: 40, height: 56, borderRadius: 6 }}
-                  contentFit="cover"
-                />
+                {Boolean(resolveMediaUrl(item.book?.coverUrl || (item.book as any)?.cover_image_url || (item.book as any)?.coverImage)) ? (
+                  <Image
+                    source={{ uri: resolveMediaUrl(item.book?.coverUrl || (item.book as any)?.cover_image_url || (item.book as any)?.coverImage) }}
+                    style={{ width: 40, height: 56, borderRadius: 6 }}
+                    contentFit="cover"
+                  />
+                ) : (
+                  <View style={{ width: 40, height: 56, borderRadius: 6 }} className="bg-slate-100 items-center justify-center border border-slate-200">
+                    <Ionicons name="book-outline" size={18} color={Colors.textMuted} />
+                  </View>
+                )}
                 <View className="flex-1 ml-3">
                   <Text className="text-sm font-semibold text-text-primary" numberOfLines={1}>
                     {item.book?.title}
@@ -377,11 +389,17 @@ export default function OrdersScreen() {
               <View className="flex-row items-center justify-between py-2">
                 {/* Requested Book */}
                 <View className="flex-1 items-center">
-                  <Image
-                    source={{ uri: resolveMediaUrl(item.requestedBook?.coverUrl) }}
-                    style={{ width: 44, height: 60, borderRadius: 6 }}
-                    contentFit="cover"
-                  />
+                  {Boolean(resolveMediaUrl(item.requestedBook?.coverUrl || (item.requestedBook as any)?.cover_image_url || (item.requestedBook as any)?.coverImage)) ? (
+                    <Image
+                      source={{ uri: resolveMediaUrl(item.requestedBook?.coverUrl || (item.requestedBook as any)?.cover_image_url || (item.requestedBook as any)?.coverImage) }}
+                      style={{ width: 44, height: 60, borderRadius: 6 }}
+                      contentFit="cover"
+                    />
+                  ) : (
+                    <View style={{ width: 44, height: 60, borderRadius: 6 }} className="bg-slate-100 items-center justify-center border border-slate-200">
+                      <Ionicons name="book-outline" size={18} color={Colors.textMuted} />
+                    </View>
+                  )}
                   <Text className="text-xs font-bold text-text-primary mt-1 text-center" numberOfLines={1}>
                     {item.requestedBook?.title}
                   </Text>
@@ -394,11 +412,17 @@ export default function OrdersScreen() {
 
                 {/* Offered Book */}
                 <View className="flex-1 items-center">
-                  <Image
-                    source={{ uri: resolveMediaUrl(item.offeredBook?.coverUrl) }}
-                    style={{ width: 44, height: 60, borderRadius: 6 }}
-                    contentFit="cover"
-                  />
+                  {Boolean(resolveMediaUrl(item.offeredBook?.coverUrl || (item.offeredBook as any)?.cover_image_url || (item.offeredBook as any)?.coverImage)) ? (
+                    <Image
+                      source={{ uri: resolveMediaUrl(item.offeredBook?.coverUrl || (item.offeredBook as any)?.cover_image_url || (item.offeredBook as any)?.coverImage) }}
+                      style={{ width: 44, height: 60, borderRadius: 6 }}
+                      contentFit="cover"
+                    />
+                  ) : (
+                    <View style={{ width: 44, height: 60, borderRadius: 6 }} className="bg-slate-100 items-center justify-center border border-slate-200">
+                      <Ionicons name="book-outline" size={18} color={Colors.textMuted} />
+                    </View>
+                  )}
                   <Text className="text-xs font-bold text-text-primary mt-1 text-center" numberOfLines={1}>
                     {item.offeredBook?.title}
                   </Text>

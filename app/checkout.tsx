@@ -370,11 +370,17 @@ export default function CheckoutScreen() {
           </Text>
           {selectedItems.map(({ book, quantity }) => (
             <View key={book.id} className="flex-row items-center py-2 border-b border-border-light last:border-b-0">
-              <Image
-                source={{ uri: resolveMediaUrl(book.coverUrl) }}
-                style={{ width: 36, height: 48, borderRadius: 6 }}
-                contentFit="cover"
-              />
+              {Boolean(resolveMediaUrl(book.coverUrl || (book as any).cover_image_url || (book as any).coverImage)) ? (
+                <Image
+                  source={{ uri: resolveMediaUrl(book.coverUrl || (book as any).cover_image_url || (book as any).coverImage) }}
+                  style={{ width: 36, height: 48, borderRadius: 6 }}
+                  contentFit="cover"
+                />
+              ) : (
+                <View style={{ width: 36, height: 48, borderRadius: 6 }} className="bg-slate-100 items-center justify-center border border-slate-200">
+                  <Ionicons name="book-outline" size={16} color={Colors.textMuted} />
+                </View>
+              )}
               <View className="flex-1 ml-3">
                 <Text className="text-xs font-semibold text-text-primary" numberOfLines={1}>
                   {book.title}

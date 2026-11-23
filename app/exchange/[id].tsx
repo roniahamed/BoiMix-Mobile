@@ -149,18 +149,34 @@ export default function ExchangeDetailScreen() {
             <Text className="text-xs font-bold text-blue-700 uppercase">কাঙ্ক্ষিত বই (Requested)</Text>
           </View>
           <View className="flex-row">
-            <Image
-              source={{
-                uri: resolveMediaUrl(
-                  exchange.requestedBook.coverUrl ||
-                    (exchange.requestedBook as any).cover_image_url ||
-                    (exchange.requestedBook as any).cover_image ||
-                    (exchange.requestedBook as any).coverImage
-                ),
-              }}
-              style={{ width: 60, height: 84, borderRadius: 6 }}
-              contentFit="cover"
-            />
+            {Boolean(
+              resolveMediaUrl(
+                exchange.requestedBook.coverUrl ||
+                  (exchange.requestedBook as any).cover_image_url ||
+                  (exchange.requestedBook as any).cover_image ||
+                  (exchange.requestedBook as any).coverImage
+              )
+            ) ? (
+              <Image
+                source={{
+                  uri: resolveMediaUrl(
+                    exchange.requestedBook.coverUrl ||
+                      (exchange.requestedBook as any).cover_image_url ||
+                      (exchange.requestedBook as any).cover_image ||
+                      (exchange.requestedBook as any).coverImage
+                  ),
+                }}
+                style={{ width: 60, height: 84, borderRadius: 6 }}
+                contentFit="cover"
+              />
+            ) : (
+              <View
+                style={{ width: 60, height: 84, borderRadius: 6 }}
+                className="bg-slate-100 items-center justify-center border border-slate-200"
+              >
+                <Ionicons name="book-outline" size={24} color={Colors.textMuted} />
+              </View>
+            )}
             <View className="flex-1 ml-3 justify-center">
               <Text className="text-sm font-bold text-text-primary" numberOfLines={2}>
                 {exchange.requestedBook.title}
@@ -191,18 +207,34 @@ export default function ExchangeDetailScreen() {
             <Text className="text-xs font-bold text-emerald-700 uppercase">প্রস্তাবিত বই (Offered)</Text>
           </View>
           <View className="flex-row">
-            <Image
-              source={{
-                uri: resolveMediaUrl(
-                  exchange.offeredBook.coverUrl ||
-                    (exchange.offeredBook as any).cover_image_url ||
-                    (exchange.offeredBook as any).cover_image ||
-                    (exchange.offeredBook as any).coverImage
-                ),
-              }}
-              style={{ width: 60, height: 84, borderRadius: 6 }}
-              contentFit="cover"
-            />
+            {Boolean(
+              resolveMediaUrl(
+                exchange.offeredBook.coverUrl ||
+                  (exchange.offeredBook as any).cover_image_url ||
+                  (exchange.offeredBook as any).cover_image ||
+                  (exchange.offeredBook as any).coverImage
+              )
+            ) ? (
+              <Image
+                source={{
+                  uri: resolveMediaUrl(
+                    exchange.offeredBook.coverUrl ||
+                      (exchange.offeredBook as any).cover_image_url ||
+                      (exchange.offeredBook as any).cover_image ||
+                      (exchange.offeredBook as any).coverImage
+                  ),
+                }}
+                style={{ width: 60, height: 84, borderRadius: 6 }}
+                contentFit="cover"
+              />
+            ) : (
+              <View
+                style={{ width: 60, height: 84, borderRadius: 6 }}
+                className="bg-slate-100 items-center justify-center border border-slate-200"
+              >
+                <Ionicons name="book-outline" size={24} color={Colors.textMuted} />
+              </View>
+            )}
             <View className="flex-1 ml-3 justify-center">
               <Text className="text-sm font-bold text-text-primary" numberOfLines={2}>
                 {exchange.offeredBook.title}

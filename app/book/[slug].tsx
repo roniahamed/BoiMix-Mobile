@@ -361,17 +361,34 @@ export default function BookDetailScreen() {
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Cover / Multi-Image Carousel */}
         <View className="relative bg-surface-dark">
-          <TouchableOpacity
-            activeOpacity={0.95}
-            onPress={() => setFullScreenImage(allImages[activeImageIndex]?.url || book.coverUrl)}
-          >
-            <Image
-              source={{ uri: resolveMediaUrl(allImages[activeImageIndex]?.url || book.coverUrl) }}
-              style={{ width: "100%", height: 340 }}
-              contentFit="contain"
-              transition={200}
-            />
-          </TouchableOpacity>
+          {Boolean(resolveMediaUrl(allImages[activeImageIndex]?.url || book.coverUrl || (book as any).cover_image_url || (book as any).coverImage)) ? (
+            <TouchableOpacity
+              activeOpacity={0.95}
+              onPress={() => setFullScreenImage(allImages[activeImageIndex]?.url || book.coverUrl || (book as any).cover_image_url || (book as any).coverImage)}
+            >
+              <Image
+                source={{
+                  uri: resolveMediaUrl(
+                    allImages[activeImageIndex]?.url ||
+                      book.coverUrl ||
+                      (book as any).cover_image_url ||
+                      (book as any).coverImage
+                  ),
+                }}
+                style={{ width: "100%", height: 340 }}
+                contentFit="contain"
+                transition={200}
+              />
+            </TouchableOpacity>
+          ) : (
+            <View
+              style={{ width: "100%", height: 300 }}
+              className="bg-slate-100 items-center justify-center border-b border-border-light"
+            >
+              <Ionicons name="book-outline" size={60} color={Colors.textMuted} />
+              <Text className="text-xs text-text-muted mt-2 font-medium">কোনো প্রচ্ছদ ছবি নেই</Text>
+            </View>
+          )}
 
           {/* Image index counter badge if multiple images */}
           {allImages.length > 1 && (
