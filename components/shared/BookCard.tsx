@@ -3,7 +3,7 @@ import {
   View,
   Text,
   TouchableOpacity,
-  Dimensions,
+  useWindowDimensions,
 } from "react-native";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
@@ -12,9 +12,8 @@ import { Colors } from "@/constants/theme";
 import type { BookCardBook } from "@/types/book";
 import { BOOK_CONDITION_LABELS } from "@/types/book";
 import { resolveMediaUrl } from "@/lib/utils/media";
+import { AddToCartButton } from "@/components/shared/AddToCartButton";
 
-const { width } = Dimensions.get("window");
-const GRID_CARD_WIDTH = (width - 48) / 2; // 2-column grid
 
 type Variant = "grid" | "horizontal" | "list";
 
@@ -23,7 +22,6 @@ type BookCardProps = {
   variant?: Variant;
   onPress?: () => void;
   onWishlistToggle?: (bookId: string, current: boolean) => void;
-  onAddToCart?: (book: BookCardBook) => void;
 };
 
 function AvailabilityBadge({ mode }: { mode?: BookCardBook["availabilityMode"] }) {
@@ -53,11 +51,11 @@ function ConditionBadge({ condition }: { condition: BookCardBook["condition"] })
   if (!cfg) return null;
   return (
     <View
-      style={{ backgroundColor: cfg.color + "15" }}
+      style={{ backgroundColor: condition === "new" ? "#DDF3D5" : "#FFF1C9" }}
       className="rounded px-1.5 py-0.5"
     >
-      <Text style={{ color: cfg.color }} className="text-xs font-medium">
-        {cfg.labelBn}
+      <Text style={{ color: condition === "new" ? Colors.primary : "#684C18" }} className="text-xs font-medium">
+        {cfg.label}
       </Text>
     </View>
   );
@@ -112,17 +110,19 @@ function getCoverUrl(book: BookCardBook): string {
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 export function BookCardSkeleton({ variant = "grid" }: { variant?: Variant }) {
+  const { width } = useWindowDimensions();
+  const gridCardWidth = (width - 48) / 2;
   if (variant === "horizontal") {
     return (
-      <View className="w-32 mr-3 animate-pulse">
-        <View className="w-32 h-44 bg-border rounded-xl mb-2" />
+      <View style={{ width: Math.max(120, (width - 32 - 8 * 2.2) / 2.2) }} className="mr-2 animate-pulse">
+        <View className="w-full h-44 bg-border rounded-xl mb-2" />
         <View className="h-3 bg-border rounded w-full mb-1" />
         <View className="h-3 bg-border rounded w-3/4" />
       </View>
     );
   }
   return (
-    <View style={{ width: GRID_CARD_WIDTH }} className="animate-pulse mb-4">
+    <View style={{ width: gridCardWidth }} className="animate-pulse mb-4">
       <View className="h-48 bg-border rounded-xl mb-2" />
       <View className="h-3 bg-border rounded w-full mb-1" />
       <View className="h-3 bg-border rounded w-3/4" />
@@ -138,6 +138,9 @@ function BookCardBase({
   onWishlistToggle,
 }: BookCardProps) {
   const router = useRouter();
+  const { width } = useWindowDimensions();
+  const gridCardWidth = (width - 48) / 2;
+  const shelfCardWidth = Math.max(120, (width - 32 - 8 * 2.2) / 2.2);
   const isOutOfStock = book.isOutOfStock || book.availability === "out-of-stock";
   const price = Number(book.price ?? 0);
   const origPrice = Number(book.originalPrice ?? 0);
@@ -161,19 +164,20 @@ function BookCardBase({
       <TouchableOpacity
         onPress={handlePress}
         activeOpacity={0.85}
-        className="w-32 mr-3"
+        style={{ width: shelfCardWidth }}
+        className="mr-2 bg-white rounded-xl p-1.5 border border-border-light"
       >
         <View className="relative mb-2">
           {coverUri ? (
             <Image
               source={{ uri: coverUri }}
-              style={{ width: 128, height: 180, borderRadius: 12 }}
-              contentFit="cover"
+              style={{ width: "100%", height: shelfCardWidth * 1.12, borderRadius: 10, backgroundColor: "#E9E6DC" }}
+              contentFit="contain"
               transition={200}
             />
           ) : (
             <View
-              style={{ width: 128, height: 180, borderRadius: 12 }}
+              style={{ width: "100%", height: shelfCardWidth * 1.12, borderRadius: 10, backgroundColor: "#E9E6DC" }}
               className="bg-slate-100 items-center justify-center border border-slate-200"
             >
               <Ionicons name="book-outline" size={36} color={Colors.textMuted} />
@@ -190,15 +194,14 @@ function BookCardBase({
               <Text className="text-white text-xs font-bold">স্টক নেই</Text>
             </View>
           )}
-          {book.availabilityMode && (
-            <View className="absolute top-1.5 left-1.5">
-              <AvailabilityBadge mode={book.availabilityMode} />
-            </View>
+          {book.condition && (
+            <View className="absolute bottom-1.5 left-1.5"><ConditionBadge condition={book.condition} /></View>
           )}
           {/* Wishlist */}
           {onWishlistToggle && (
             <TouchableOpacity
-              onPress={() => onWishlistToggle(book.id, !!book.isWishlisted)}
+              onPress={(event) => { event.stopPropagation(); onWishlistToggle(book.id, !!book.isWishlisted); }}
+              accessibilityRole="button" accessibilityLabel={book.isWishlisted ? "পছন্দের তালিকা থেকে সরান" : "পছন্দের তালিকায় যোগ করুন"}
               className="absolute top-1.5 right-1.5 w-7 h-7 bg-white/90 rounded-full items-center justify-center shadow-sm"
             >
               <Ionicons
@@ -209,13 +212,19 @@ function BookCardBase({
             </TouchableOpacity>
           )}
         </View>
-        <Text className="text-xs font-semibold text-text-primary" numberOfLines={2}>
+        <Text className="text-xs font-bold text-text-primary" numberOfLines={1}>
           {book.title}
         </Text>
         <Text className="text-xs text-text-secondary mt-0.5" numberOfLines={1}>
           {book.author}
         </Text>
-        <PriceTag book={book} />
+        <View className="flex-row items-center justify-between mt-2">
+          <View className="flex-1"><PriceTag book={book} />
+            {!!book.location && <View className="flex-row items-center mt-1"><Ionicons name="location-outline" size={12} color={Colors.textSecondary} /><Text className="text-xs text-text-secondary ml-1 flex-1" numberOfLines={1}>{book.location}</Text></View>}
+          </View>
+
+        </View>
+        <AddToCartButton book={book} />
       </TouchableOpacity>
     );
   }
@@ -264,6 +273,7 @@ function BookCardBase({
               <Text className="text-xs text-text-muted">{book.distance}</Text>
             </View>
           )}
+          <AddToCartButton book={book} />
         </View>
       </TouchableOpacity>
     );
@@ -274,21 +284,21 @@ function BookCardBase({
     <TouchableOpacity
       onPress={handlePress}
       activeOpacity={0.85}
-      style={{ width: GRID_CARD_WIDTH }}
-      className="mb-4 bg-white rounded-xl p-2 border border-border-light shadow-sm"
+      style={{ width: gridCardWidth }}
+      className="mb-4 bg-white rounded-2xl p-2 border border-border-light shadow-sm"
     >
       {/* Cover */}
       <View className="relative mb-2">
         {coverUri ? (
           <Image
             source={{ uri: coverUri }}
-            style={{ width: "100%", height: GRID_CARD_WIDTH * 1.35, borderRadius: 10 }}
+            style={{ width: "100%", height: gridCardWidth * 1.35, borderRadius: 10 }}
             contentFit="cover"
             transition={200}
           />
         ) : (
           <View
-            style={{ width: "100%", height: GRID_CARD_WIDTH * 1.35, borderRadius: 10 }}
+            style={{ width: "100%", height: gridCardWidth * 1.35, borderRadius: 10 }}
             className="bg-slate-100 items-center justify-center border border-slate-200"
           >
             <Ionicons name="book-outline" size={40} color={Colors.textMuted} />
@@ -364,6 +374,7 @@ function BookCardBase({
           <Text className="text-xs text-text-muted">{book.distance}</Text>
         </View>
       )}
+      <AddToCartButton book={book} />
     </TouchableOpacity>
   );
 }

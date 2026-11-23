@@ -124,6 +124,7 @@ export default function CategoryDetailScreen() {
         </View>
       ) : (
         <FlatList
+          key={slug}
           data={books ?? []}
           keyExtractor={(item) => item.id}
           numColumns={2}

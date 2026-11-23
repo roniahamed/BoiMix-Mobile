@@ -72,7 +72,7 @@ export type BookConditionLabel = {
 
 export const BOOK_CONDITION_LABELS: BookConditionLabel[] = [
   { value: "new", label: "New", labelBn: "নতুন", color: "#10B981" },
-  { value: "excellent", label: "Excellent", labelBn: "অতি উত্তম", color: "#3B82F6" },
+  { value: "excellent", label: "Like New", labelBn: "অতি উত্তম", color: "#3B82F6" },
   { value: "good", label: "Good", labelBn: "ভালো", color: "#8B5CF6" },
   { value: "fair", label: "Fair", labelBn: "মোটামুটি", color: "#F59E0B" },
   { value: "poor", label: "Poor", labelBn: "খারাপ", color: "#EF4444" },

@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -57,74 +58,63 @@ export default function ChatDetailScreen() {
   // Auto-mark conversation as read on enter
   useEffect(() => {
     if (id && user) {
-      messagesApi.markAsRead(id).catch(() => {});
+      messagesApi.markAsRead(id).then(() => {
+        queryClient.invalidateQueries({ queryKey: ["inbox-unread-messages"] });
+        queryClient.invalidateQueries({ queryKey: ["conversations-list"] });
+      }).catch(() => {});
     }
-  }, [id, user]);
+  }, [id, user, queryClient]);
 
-  const { data: messages, isLoading } = useQuery<MessageItem[]>({
+  const { data: messages, isLoading, isError, refetch } = useQuery<MessageItem[]>({
     queryKey: ["conversation-messages", id],
     queryFn: async () => {
-      if (id && user) {
-        try {
-          const res = await messagesApi.getMessages(id, { limit: 50 });
-          const items = Array.isArray(res.data) ? res.data : (res.data as any)?.results ?? [];
-          return items.map((m: any) => ({
-            id: m.id,
-            body: m.body,
-            isMe: m.sender?.id === user.id || m.sender?.username === user.username,
-            createdAt: m.created_at || m.createdAt || new Date().toISOString(),
-          }));
-        } catch {
-          return [];
-        }
+      if (!id || !user) return [];
+      const res = await messagesApi.getMessages(id, { limit: 50 });
+      const items = Array.isArray(res.data) ? res.data : (res.data as any)?.results ?? [];
+      const unread = items.some((m: any) => m.sender?.id !== user.id && m.sender?.username !== user.username && (m.is_read === false || m.isRead === false));
+      if (unread) {
+        messagesApi.markAsRead(id).then(() => {
+          queryClient.invalidateQueries({ queryKey: ["inbox-unread-messages"] });
+          queryClient.invalidateQueries({ queryKey: ["conversations-list"] });
+        }).catch(() => {});
       }
-      return [];
+      return items.map((m: any) => ({
+        id: m.id,
+        body: m.body,
+        isMe: m.sender?.id === user.id || m.sender?.username === user.username,
+        createdAt: m.created_at || m.createdAt || "",
+      }));
     },
+    enabled: !!id && !!user,
     refetchInterval: 5000,
   });
 
   const sendMutation = useMutation({
     mutationFn: async (text: string) => {
       if (!id || !user) throw new Error("লগইন প্রয়োজন");
-      try {
-        const res = await messagesApi.sendMessage(id, { body: text });
-        return res.data;
-      } catch (err: any) {
-        // If id was a recipient user ID/username instead of conversation ID, try createConversation
-        try {
-          await messagesApi.createConversation({
-            recipient_id: id.includes("-") && id.length === 36 ? id : undefined,
-            recipient_username: !id.includes("-") ? id : undefined,
-            initial_message: text,
-          });
-          return {
-            id: `msg-${Date.now()}`,
-            body: text,
-            createdAt: new Date().toISOString(),
-          };
-        } catch {
-          throw err;
-        }
-      }
+      const res = await messagesApi.sendMessage(id, { body: text });
+      return res.data;
     },
-    onSuccess: (newMsg) => {
+    onSuccess: (newMsg, sentText) => {
       queryClient.setQueryData<MessageItem[]>(
         ["conversation-messages", id],
         (old = []) => [
           ...old,
           {
             id: newMsg.id || `msg-${Date.now()}`,
-            body: input,
+            body: sentText,
             isMe: true,
             createdAt: new Date().toISOString(),
           },
         ]
       );
-      setInput("");
+      setInput((current) => current.trim() === sentText ? "" : current);
+      queryClient.invalidateQueries({ queryKey: ["conversations-list"] });
       setTimeout(() => {
         flatListRef.current?.scrollToEnd({ animated: true });
       }, 100);
     },
+    onError: () => Alert.alert("মেসেজ পাঠানো যায়নি", "ইন্টারনেট সংযোগ দেখে আবার চেষ্টা করুন।"),
   });
 
   const handleSend = () => {
@@ -167,9 +157,7 @@ export default function ChatDetailScreen() {
               <Text className="text-sm font-bold text-text-primary" numberOfLines={1}>
                 {displayName}
               </Text>
-              <Text className="text-[11px] text-emerald-600 font-medium">
-                অনলাইনে সক্রিয়
-              </Text>
+
             </View>
           </TouchableOpacity>
         </View>
@@ -185,11 +173,15 @@ export default function ChatDetailScreen() {
       </View>
 
       {/* Messages List */}
-      {isLoading ? (
+      {!user ? (
+        <View className="flex-1 items-center justify-center"><Text className="text-text-secondary">মেসেজ দেখতে সাইন ইন করুন</Text><TouchableOpacity onPress={() => router.push("/auth/login")} className="mt-3"><Text className="text-primary font-bold">সাইন ইন করুন</Text></TouchableOpacity></View>
+      ) : isLoading ? (
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator color={Colors.primary} />
           <Text className="text-xs text-text-muted mt-2">মেসেজ লোড হচ্ছে...</Text>
         </View>
+      ) : isError ? (
+        <View className="flex-1 items-center justify-center"><Text className="text-text-secondary">মেসেজ লোড করা যায়নি</Text><TouchableOpacity onPress={() => refetch()} className="mt-3"><Text className="text-primary font-bold">আবার চেষ্টা করুন</Text></TouchableOpacity></View>
       ) : (
         <FlatList
           ref={flatListRef}
@@ -238,7 +230,7 @@ export default function ChatDetailScreen() {
       )}
 
       {/* Input Field */}
-      <View
+      {user && <View
         style={{ paddingBottom: Math.max(insets.bottom, 12) }}
         className="px-3 pt-2 bg-white border-t border-border-light flex-row items-center gap-2"
       >
@@ -270,7 +262,7 @@ export default function ChatDetailScreen() {
             />
           )}
         </TouchableOpacity>
-      </View>
+      </View>}
     </KeyboardAvoidingView>
   );
 }

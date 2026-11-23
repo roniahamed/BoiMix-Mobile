@@ -5,6 +5,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { QueryProvider } from "@/providers/QueryProvider";
 import { useAuthEvents } from "@/lib/hooks/useAuthEvents";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { CartConfirmation } from "@/components/shared/CartConfirmation";
 import { OfflineBanner } from "@/components/shared/OfflineBanner";
 import "../global.css";
 
@@ -25,6 +26,7 @@ export default function RootLayout() {
         <QueryProvider>
           <OfflineBanner />
           <AppEventListeners />
+          <CartConfirmation />
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="index" />
             <Stack.Screen name="auth" />

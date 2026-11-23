@@ -46,24 +46,24 @@ export default function SellTabScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Main CTA Card */}
-        <View className="bg-primary rounded-3xl p-6 mb-5 shadow-sm">
-          <View className="w-14 h-14 rounded-2xl bg-white/20 items-center justify-center mb-4">
-            <Ionicons name="book" size={30} color="#FFFFFF" />
+        <View className="bg-primary/10 rounded-3xl p-6 mb-5 border border-primary/10">
+          <View className="w-14 h-14 rounded-2xl bg-white items-center justify-center mb-4">
+            <Ionicons name="book" size={30} color={Colors.primary} />
           </View>
-          <Text className="text-xl font-bold text-white leading-7">
+          <Text className="text-xl font-bold text-secondary leading-7">
             ঘরে বসে বই বিক্রি, ধার অথবা বিনিময় করুন
           </Text>
-          <Text className="text-sm text-white/85 mt-2 leading-5">
+          <Text className="text-sm text-text-secondary mt-2 leading-5">
             কয়েক ক্লিকেই আপনার বইয়ের ছবি ও মূল্য দিয়ে লিস্টিং তৈরি করুন। লক্ষাধিক পাঠকের কাছে পৌঁছে যাবে আপনার বই।
           </Text>
 
           <TouchableOpacity
             onPress={handleStartSelling}
             activeOpacity={0.85}
-            className="bg-white rounded-xl py-3.5 px-5 mt-5 flex-row items-center justify-center gap-2"
+            className="bg-primary rounded-full py-3.5 px-5 mt-5 flex-row items-center justify-center gap-2"
           >
-            <Ionicons name="add-circle" size={22} color={Colors.primary} />
-            <Text className="text-sm font-bold text-primary">
+            <Ionicons name="add-circle" size={22} color="white" />
+            <Text className="text-sm font-bold text-white">
               নতুন বই লিস্টিং যোগ করুন
             </Text>
           </TouchableOpacity>

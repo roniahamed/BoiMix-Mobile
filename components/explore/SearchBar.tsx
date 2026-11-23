@@ -33,13 +33,13 @@ export function SearchBar({
 
   return (
     <View className="flex-row items-center gap-2">
-      <View className="flex-1 flex-row items-center border border-border bg-white rounded-xl px-3 h-12 shadow-sm">
+      <View className="flex-1 flex-row items-center border border-border bg-white rounded-full px-4 h-12 shadow-sm">
         <Ionicons name="search-outline" size={18} color={Colors.textMuted} className="mr-2" />
         <TextInput
           ref={inputRef}
           className="flex-1 text-base text-text-primary ml-2"
           placeholder={placeholder}
-          placeholderTextColor="#9CA3AF"
+          placeholderTextColor={Colors.textMuted}
           value={value}
           onChangeText={onChangeText}
           autoFocus={autoFocus}
@@ -59,7 +59,7 @@ export function SearchBar({
       {onFilterPress && (
         <TouchableOpacity
           onPress={onFilterPress}
-          className="relative w-12 h-12 bg-white border border-border rounded-xl items-center justify-center shadow-sm"
+          className="relative w-12 h-12 bg-white border border-border rounded-full items-center justify-center shadow-sm"
         >
           <Ionicons name="options-outline" size={20} color={Colors.textPrimary} />
           {filterCount > 0 && (

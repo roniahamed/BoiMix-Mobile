@@ -70,11 +70,11 @@ export default function ProfileScreen() {
   return (
     <View className="flex-1 bg-surface-background" style={{ paddingTop: insets.top }}>
       {/* Top Bar */}
-      <View className="flex-row items-center justify-between px-5 py-3.5 bg-white border-b border-border">
-        <Text className="text-xl font-bold text-text-primary">আমার অ্যাকাউন্ট</Text>
+      <View className="flex-row items-center justify-between px-5 py-4 bg-surface-dark">
+        <Text className="text-xl font-bold text-secondary">আমার অ্যাকাউন্ট</Text>
         <TouchableOpacity
           onPress={() => router.push("/notifications")}
-          className="w-10 h-10 items-center justify-center rounded-full bg-slate-50 border border-slate-200"
+          className="w-11 h-11 items-center justify-center rounded-full bg-white border border-border-light"
         >
           <Ionicons name="notifications-outline" size={20} color={Colors.textPrimary} />
         </TouchableOpacity>

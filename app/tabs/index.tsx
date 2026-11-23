@@ -5,6 +5,7 @@ import {
   RefreshControl,
   TouchableOpacity,
   Alert,
+  Modal,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -14,38 +15,30 @@ import * as Location from "expo-location";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 
+import { CategoryCarousel } from "@/components/home/CategoryCarousel";
 import { HeroBanner } from "@/components/home/HeroBanner";
 import { BookHorizontalList } from "@/components/home/BookHorizontalList";
 import { booksApi } from "@/lib/api/books";
 import { queryKeys } from "@/lib/api/query-keys";
 import { Colors } from "@/constants/theme";
 import { useCartStore } from "@/stores/cart-store";
-import { useAuthStore } from "@/stores/auth-store";
-import { notificationsApi } from "@/lib/api/notifications";
-
-const QUICK_ACTIONS = [
-  { label: "বিক্রয়", iconName: "pricetag-outline" as const, mode: "sell" },
-  { label: "বিনিময়", iconName: "repeat-outline" as const, mode: "exchange" },
-  { label: "ধার", iconName: "book-outline" as const, mode: "borrow" },
-  { label: "কাছের বই", iconName: "location-outline" as const, mode: "nearby" },
-];
 
 const MOCK_BANNERS = [
   {
     id: "1",
-    imageUrl: require("@/assets/banners/boimix-hero-banner.jpg"),
-    title: "বইয়ের দুনিয়ায় আপনাকে স্বাগতম!",
-    subtitle: "লক্ষাধিক বই একটি অ্যাপে",
+    imageUrl: require("@/assets/banners/marketplace-hero-green.jpg"),
+    title: "নতুন ও পুরাতন বইয়ের বিশ্বস্ত বাজার",
+    subtitle: "পছন্দের বই খুঁজুন, কিনুন বা নিজের বই বিক্রি করুন",
   },
   {
     id: "2",
-    imageUrl: require("@/assets/banners/exchange-community.png"),
+    imageUrl: require("@/assets/banners/marketplace-hero-green.jpg"),
     title: "বই বিনিময় করুন",
     subtitle: "কাছের পাঠকদের সাথে সরাসরি",
   },
   {
     id: "3",
-    imageUrl: require("@/assets/banners/book-festival.png"),
+    imageUrl: require("@/assets/banners/marketplace-hero-green.jpg"),
     title: "বইমেলা উৎসব অফার",
     subtitle: "বিশেষ ছাড়ে সেরা বই সংগ্রহ করুন",
   },
@@ -55,19 +48,12 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationDenied, setLocationDenied] = useState(false);
+  const [locating, setLocating] = useState(false);
 
-  const user = useAuthStore((s) => s.user);
   const cartCount = useCartStore((s) => s.items.reduce((sum, i) => sum + i.quantity, 0));
-
-  const { data: notifSummary } = useQuery({
-    queryKey: ["notifications-summary"],
-    queryFn: () => notificationsApi.getSummary(),
-    enabled: !!user,
-    select: (res) => res.data,
-  });
-  const unreadNotifs = notifSummary?.unread_notifications_count ?? 0;
 
   const { data: trendingData, isLoading: trendingLoading, isError: trendingError, refetch: refetchTrending } = useQuery({
     queryKey: queryKeys.books.trending(),
@@ -95,188 +81,103 @@ export default function HomeScreen() {
   });
 
   const { data: categoriesData } = useQuery({
-    queryKey: ["home-categories"],
-    queryFn: async () => {
-      try {
-        const res = await booksApi.getCategories();
-        return res.data?.results?.slice(0, 10) ?? (Array.isArray(res.data) ? (res.data as any).slice(0, 10) : []);
-      } catch {
-        return [];
-      }
-    },
+    queryKey: queryKeys.books.categories(),
+    queryFn: () => booksApi.getAllCategories(),
   });
 
   const requestLocation = useCallback(async () => {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== "granted") { setLocationDenied(true); return; }
-    const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-    setUserLocation({ lat: loc.coords.latitude, lng: loc.coords.longitude });
+    setLocating(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") { setLocationDenied(true); return; }
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      setLocationDenied(false);
+      setUserLocation({ lat: loc.coords.latitude, lng: loc.coords.longitude });
+    } catch {
+      Alert.alert("লোকেশন পাওয়া যায়নি", "লোকেশন চালু আছে কিনা দেখে আবার চেষ্টা করুন।");
+    } finally {
+      setLocating(false);
+    }
   }, []);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    await Promise.allSettled([refetchTrending(), refetchNew(), refetchNearby(), refetchLibrary()]);
+    await Promise.allSettled([refetchTrending(), refetchNew(), refetchLibrary(), ...(userLocation ? [refetchNearby()] : [])]);
     setRefreshing(false);
-  }, []);
-
-  const handleQuickAction = (mode: string) => {
-    if (mode === "nearby") {
-      if (locationDenied) {
-        Alert.alert("লোকেশন প্রয়োজন", "কাছের বই দেখতে লোকেশন অনুমতি দিন।",
-          [{ text: "না" }, { text: "অনুমতি দিন", onPress: requestLocation }]);
-        return;
-      }
-      router.push("/near-me" as never);
-      return;
-    }
-    if (mode === "sell") {
-      router.push("/tabs/sell" as never);
-      return;
-    }
-    router.push({ pathname: "/tabs/explore" as never, params: { mode } });
-  };
+  }, [refetchTrending, refetchNew, refetchNearby, refetchLibrary, userLocation]);
 
   return (
-    <ScrollView
-      className="flex-1 bg-surface-dark"
-      showsVerticalScrollIndicator={false}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={Colors.primary} colors={[Colors.primary]} />}
-    >
+    <View className="flex-1 bg-surface-dark">
+      <Modal visible={menuOpen} transparent animationType="fade" onRequestClose={() => setMenuOpen(false)}>
+        <View className="flex-1 bg-black/40 justify-end">
+          <TouchableOpacity className="flex-1" activeOpacity={1} onPress={() => setMenuOpen(false)} accessibilityLabel="মেনু বন্ধ করুন" />
+          <View className="bg-white rounded-t-3xl p-5" style={{ paddingBottom: insets.bottom + 20 }}>
+            <View className="flex-row justify-between items-center mb-4"><Text className="text-xl font-bold text-secondary">মেনু</Text><TouchableOpacity onPress={() => setMenuOpen(false)} accessibilityLabel="মেনু বন্ধ করুন"><Ionicons name="close" size={26} color={Colors.textPrimary} /></TouchableOpacity></View>
+            {([ ["অ্যাকাউন্ট", "/tabs/profile", "person-outline"], ["মেসেজ", "/messages", "chatbubble-ellipses-outline"], ["নোটিফিকেশন", "/notifications", "notifications-outline"], ["সেটিংস", "/settings", "settings-outline"] ] as const).map(([label, route, icon]) => <TouchableOpacity key={route} onPress={() => { setMenuOpen(false); router.push(route as never); }} className="flex-row items-center py-3 border-b border-border-light"><Ionicons name={icon} size={21} color={Colors.primary} /><Text className="text-base text-text-primary ml-3">{label}</Text></TouchableOpacity>)}
+          </View>
+        </View>
+      </Modal>
       {/* Header */}
-      <View style={{ paddingTop: insets.top + 8 }} className="flex-row items-center justify-between px-4 pb-3 bg-white border-b border-border-light">
-        <View className="flex-row items-center">
-          <Image
-            source={require("@/assets/images/boimix-logo.png")}
-            style={{ width: 110, height: 34 }}
-            contentFit="contain"
-          />
-        </View>
-        <View className="flex-row items-center gap-1.5">
-          <TouchableOpacity onPress={() => router.push("/search" as never)} className="w-9 h-9 bg-surface-dark rounded-xl items-center justify-center">
-            <Ionicons name="search-outline" size={19} color={Colors.textPrimary} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => router.push("/messages" as never)} className="w-9 h-9 bg-surface-dark rounded-xl items-center justify-center">
-            <Ionicons name="chatbubble-ellipses-outline" size={19} color={Colors.textPrimary} />
-          </TouchableOpacity>
-          <View className="relative">
-            <TouchableOpacity onPress={() => router.push("/notifications" as never)} className="w-9 h-9 bg-surface-dark rounded-xl items-center justify-center">
-              <Ionicons name="notifications-outline" size={19} color={Colors.textPrimary} />
-            </TouchableOpacity>
-            {unreadNotifs > 0 ? (
-              <View className="absolute -top-1 -right-1 bg-rose-600 min-w-[16px] h-4 rounded-full items-center justify-center px-1 border border-white">
-                <Text className="text-[9px] font-bold text-white">
-                  {unreadNotifs > 9 ? "9+" : unreadNotifs}
-                </Text>
-              </View>
-            ) : null}
-          </View>
-          <View className="relative">
-            <TouchableOpacity onPress={() => router.push("/cart" as never)} className="w-9 h-9 bg-surface-dark rounded-xl items-center justify-center">
-              <Ionicons name="cart-outline" size={19} color={Colors.textPrimary} />
-            </TouchableOpacity>
-            {cartCount > 0 ? (
-              <View className="absolute -top-1 -right-1 bg-primary min-w-[16px] h-4 rounded-full items-center justify-center px-1 border border-white">
-                <Text className="text-[9px] font-bold text-white">
-                  {cartCount > 9 ? "9+" : cartCount}
-                </Text>
-              </View>
-            ) : null}
-          </View>
-        </View>
-      </View>
-
-      {/* Top Search Bar */}
-      <View className="px-4 py-2 bg-white border-b border-border-light">
-        <TouchableOpacity
-          onPress={() => router.push("/search" as never)}
-          activeOpacity={0.8}
-          className="flex-row items-center bg-surface-dark border border-border-light rounded-2xl px-3.5 py-2.5"
-        >
-          <Ionicons name="search-outline" size={18} color={Colors.textMuted} />
-          <Text className="text-xs text-text-muted ml-2.5 flex-1">
-            বইয়ের নাম, লেখক বা বিষয় খুঁজুন...
-          </Text>
-          <View className="bg-primary/10 px-2 py-0.5 rounded-md">
-            <Text className="text-[10px] font-bold text-primary">খুঁজুন</Text>
-          </View>
+      <View style={{ paddingTop: insets.top + 8 }} className="flex-row items-center px-4 pb-3 bg-surface-dark">
+        <TouchableOpacity onPress={() => setMenuOpen(true)} accessibilityRole="button" accessibilityLabel="মেনু খুলুন" className="w-11 h-11 items-center justify-center">
+          <Ionicons name="menu-outline" size={29} color={Colors.secondary} />
         </TouchableOpacity>
-      </View>
-
-      {/* Hero Banner */}
-      <View className="mt-3"><HeroBanner items={MOCK_BANNERS} /></View>
-
-      {/* Quick Actions */}
-      <View className="flex-row justify-around bg-white py-3 px-2 mb-3 border-y border-border-light">
-        {QUICK_ACTIONS.map((action) => (
-          <TouchableOpacity key={action.mode} onPress={() => handleQuickAction(action.mode)} activeOpacity={0.75} className="items-center px-2">
-            <View className="w-12 h-12 bg-primary/10 rounded-xl items-center justify-center mb-1.5">
-              <Ionicons name={action.iconName} size={22} color={Colors.primary} />
-            </View>
-            <Text className="text-xs text-text-primary font-medium">{action.label}</Text>
+        <View className="flex-1 ml-1"><Image source={require("@/assets/images/boimix-logo.png")} style={{ width: "100%", maxWidth: 125, height: 42 }} contentFit="contain" contentPosition="left" accessibilityLabel="BoiMix" /></View>
+        <TouchableOpacity onPress={() => router.push("/search" as never)} accessibilityRole="button" accessibilityLabel="বই খুঁজুন" className="w-11 h-11 items-center justify-center"><Ionicons name="search-outline" size={24} color={Colors.secondary} /></TouchableOpacity>
+        <TouchableOpacity onPress={() => router.push("/wishlist" as never)} accessibilityRole="button" accessibilityLabel="পছন্দের বই" className="w-11 h-11 items-center justify-center">
+          <Ionicons name="heart-outline" size={24} color={Colors.secondary} />
+        </TouchableOpacity>
+        <View>
+          <TouchableOpacity onPress={() => router.push("/cart" as never)} accessibilityRole="button" accessibilityLabel="কার্ট" className="w-11 h-11 items-center justify-center">
+            <Ionicons name="cart-outline" size={24} color={Colors.secondary} />
           </TouchableOpacity>
-        ))}
+          {cartCount > 0 && <View className="absolute top-0 right-0 bg-error min-w-[18px] h-[18px] rounded-full items-center justify-center px-1"><Text className="text-[10px] font-bold text-white">{cartCount > 9 ? "9+" : cartCount}</Text></View>}
+        </View>
       </View>
 
-      {/* Category Chips Bar */}
-      {categoriesData && categoriesData.length > 0 && (
-        <View className="mb-3">
-          <View className="flex-row items-center justify-between px-4 mb-2.5">
-            <Text className="text-sm font-bold text-text-primary">জনপ্রিয় ক্যাটাগরি</Text>
-            <TouchableOpacity onPress={() => router.push("/tabs/explore" as never)}>
-              <Text className="text-xs font-bold text-primary">সব দেখুন</Text>
+      <ScrollView
+        className="flex-1"
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={Colors.primary} colors={[Colors.primary]} />}
+      >
+      {/* Hero Banner */}
+      <View className="mt-4"><HeroBanner items={MOCK_BANNERS} /></View>
+
+      {/* Categories */}
+      <CategoryCarousel categories={categoriesData ?? []} />
+
+      <BookHorizontalList title="নতুন সংযোজিত বই" books={newData ?? []} loading={newLoading} error={newError} onRetry={refetchNew} seeAllRoute="/search" />
+      <TouchableOpacity onPress={() => router.push("/tabs/sell" as never)} activeOpacity={0.85} className="mx-4 mb-6 rounded-2xl overflow-hidden" style={{ height: 125 }}>
+        <Image source={require("@/assets/banners/sell-books-green.jpg")} contentFit="cover" style={{ position: "absolute", width: "100%", height: "100%" }} />
+        <View className="p-4 justify-center h-full" style={{ width: "57%" }}>
+          <Text className="text-lg font-bold text-secondary leading-6">নিজের বই বিক্রি করুন</Text>
+          <Text className="text-xs text-text-primary mt-1" numberOfLines={2}>পুরাতন বা অব্যবহৃত বই সহজেই লিস্ট করুন</Text>
+          <View className="bg-primary rounded-full self-start px-3 py-1.5 mt-2"><Text className="text-white text-xs font-bold">বই বিক্রি করুন  →</Text></View>
+        </View>
+      </TouchableOpacity>
+      <BookHorizontalList title="জনপ্রিয় বই" books={trendingData ?? []} loading={trendingLoading} error={trendingError} onRetry={refetchTrending} seeAllRoute="/search" />
+
+      {!userLocation ? (
+        <View className="bg-white mx-4 rounded-2xl p-4 mb-6 flex-row items-center">
+          <View className="w-12 h-12 rounded-2xl bg-primary/10 items-center justify-center mr-3">
+            <Ionicons name="location-outline" size={24} color={Colors.primary} />
+          </View>
+          <View className="flex-1">
+            <Text className="text-base font-bold text-text-primary">আপনার কাছের বই</Text>
+            <Text className="text-xs text-text-secondary mt-1">{locationDenied ? "লোকেশন অনুমতি দিয়ে আশেপাশের বই খুঁজুন" : "আশেপাশের পাঠক ও বই আবিষ্কার করুন"}</Text>
+            <TouchableOpacity onPress={requestLocation} disabled={locating} accessibilityRole="button" className="mt-2 self-start">
+              <Text className="text-sm text-primary font-bold">{locating ? "লোকেশন খোঁজা হচ্ছে..." : "লোকেশন চালু করুন  →"}</Text>
             </TouchableOpacity>
           </View>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}
-          >
-            {categoriesData.map((cat) => (
-              <TouchableOpacity
-                key={cat.id}
-                onPress={() =>
-                  router.push({
-                    pathname: "/category/[slug]",
-                    params: {
-                      slug: cat.slug,
-                      name: cat.name,
-                      nameBn: cat.nameBn || (cat as any).name_bn || cat.name,
-                    },
-                  })
-                }
-                activeOpacity={0.75}
-                className="flex-row items-center bg-white border border-border-light px-3.5 py-2 rounded-2xl shadow-xs"
-              >
-                <View className="w-6 h-6 rounded-full bg-primary/10 items-center justify-center mr-2">
-                  <Ionicons name="book-outline" size={13} color={Colors.primary} />
-                </View>
-                <Text className="text-xs font-semibold text-text-primary">
-                  {cat.nameBn || (cat as any).name_bn || cat.name}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-      )}
-
-      <BookHorizontalList title="জনপ্রিয় বই" books={trendingData ?? []} loading={trendingLoading} error={trendingError} onRetry={refetchTrending} seeAllRoute="/tabs/explore" />
-      <BookHorizontalList title="নতুন বই" books={newData ?? []} loading={newLoading} error={newError} onRetry={refetchNew} seeAllRoute="/tabs/explore" />
-
-      {locationDenied ? (
-        <View className="bg-white mx-4 rounded-xl p-4 mb-5 border border-border">
-          <Text className="text-sm font-medium text-text-primary mb-1">কাছের বই দেখুন</Text>
-          <Text className="text-xs text-text-secondary mb-3">লোকেশন অনুমতি দিলে আপনার আশেপাশের বই দেখতে পাবেন</Text>
-          <TouchableOpacity onPress={requestLocation} className="bg-primary/10 rounded-lg py-2 items-center">
-            <Text className="text-sm text-primary font-medium">লোকেশন চালু করুন</Text>
-          </TouchableOpacity>
         </View>
       ) : (
         <BookHorizontalList title="কাছের বই" books={nearbyData ?? []} loading={nearbyLoading && !!userLocation} error={nearbyError} onRetry={refetchNearby} seeAllRoute="/near-me" />
       )}
 
-      <BookHorizontalList title="কেন্দ্রীয় লাইব্রেরি" books={libraryData ?? []} loading={libraryLoading} error={libraryError} onRetry={refetchLibrary} seeAllRoute="/tabs/explore" />
+      <BookHorizontalList title="কেন্দ্রীয় লাইব্রেরি" books={libraryData ?? []} loading={libraryLoading} error={libraryError} onRetry={refetchLibrary} seeAllRoute="/search" />
 
       <View style={{ height: insets.bottom + 16 }} />
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }

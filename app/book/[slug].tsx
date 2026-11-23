@@ -25,6 +25,7 @@ import { queryKeys } from "@/lib/api/query-keys";
 import { messagesApi } from "@/lib/api/messages";
 import { useAuthStore } from "@/stores/auth-store";
 import { useCartStore } from "@/stores/cart-store";
+import { useCartConfirmationStore } from "@/stores/cart-confirmation-store";
 import { useWishlistStore } from "@/stores/wishlist-store";
 import { BOOK_CONDITION_LABELS, type BookCardBook } from "@/types/book";
 import { Colors } from "@/constants/theme";
@@ -40,6 +41,7 @@ export default function BookDetailScreen() {
 
   const user = useAuthStore((s) => s.user);
   const addToCart = useCartStore((s) => s.addItem);
+  const showCartConfirmation = useCartConfirmationStore((s) => s.show);
   const { isWishlisted, toggleBook } = useWishlistStore();
 
   const wishlisted = isWishlisted(slug ?? "");
@@ -187,10 +189,7 @@ export default function BookDetailScreen() {
   const handleAddToCart = () => {
     if (!book) return;
     addToCart(book);
-    Alert.alert("যোগ হয়েছে", `"${book.title}" কার্টে যোগ করা হয়েছে।`, [
-      { text: "ঠিক আছে" },
-      { text: "কার্ট দেখুন", onPress: () => router.push("/cart" as never) },
-    ]);
+    showCartConfirmation(book.title);
   };
 
   const handleBuyNow = () => {
@@ -253,15 +252,7 @@ export default function BookDetailScreen() {
         },
       });
     } catch {
-      router.push({
-        pathname: "/messages/[id]",
-        params: {
-          id: sellerId || sellerUsername || `user-${book.id}`,
-          name: sellerDisplayName,
-          username: sellerUsername || "",
-          avatar: sellerAvatar || "",
-        },
-      });
+      Alert.alert("মেসেজ খোলা যায়নি", "আবার চেষ্টা করুন।");
     } finally {
       setCreatingChat(false);
     }
@@ -364,7 +355,7 @@ export default function BookDetailScreen() {
 
   return (
     <View className="flex-1 bg-white">
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView key={slug} showsVerticalScrollIndicator={false}>
         {/* Cover / Multi-Image Carousel */}
         <View className="relative bg-surface-dark">
           {Boolean(resolveMediaUrl(allImages[activeImageIndex]?.url || book.coverUrl || (book as any).cover_image_url || (book as any).coverImage)) ? (
@@ -522,7 +513,7 @@ export default function BookDetailScreen() {
             {conditionLabel ? (
               <View style={{ backgroundColor: conditionLabel.color + "20" }} className="px-2.5 py-1 rounded-md">
                 <Text style={{ color: conditionLabel.color }} className="text-xs font-semibold">
-                  {conditionLabel.labelBn}
+                  {conditionLabel.label}
                 </Text>
               </View>
             ) : null}
@@ -590,7 +581,7 @@ export default function BookDetailScreen() {
               )) ? (
                 <>
                   <Button
-                    label="কার্টে যোগ করুন"
+                    label="Add to Cart"
                     onPress={handleAddToCart}
                     variant="outline"
                     leftIcon={<Ionicons name="cart-outline" size={18} color={Colors.primary} />}

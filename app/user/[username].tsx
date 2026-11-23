@@ -13,6 +13,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/theme";
+import { messagesApi } from "@/lib/api/messages";
+import { useAuthStore } from "@/stores/auth-store";
 import { usersApi } from "@/lib/api/users";
 import { BookCard } from "@/components/shared/BookCard";
 import { resolveMediaUrl } from "@/lib/utils/media";
@@ -23,6 +25,7 @@ import type { BookCardBook } from "@/types/book";
 export default function UserPublicProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const user = useAuthStore((state) => state.user);
   const { username } = useLocalSearchParams<{ username: string }>();
 
   // Fetch user profile
@@ -139,7 +142,7 @@ export default function UserPublicProfileScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView key={username} showsVerticalScrollIndicator={false}>
         {/* Cover Image */}
         {profile.coverUrl && resolveMediaUrl(profile.coverUrl) ? (
           <Image
@@ -195,17 +198,15 @@ export default function UserPublicProfileScreen() {
               </TouchableOpacity>
 
               <TouchableOpacity
-                onPress={() =>
-                  router.push({
-                    pathname: "/messages/[id]",
-                    params: {
-                      id: `conv-user-${profile.username}`,
-                      name: profile.name,
-                      username: profile.username,
-                      avatar: profile.avatarUrl || "",
-                    },
-                  })
-                }
+                onPress={async () => {
+                  if (!user) { router.push("/auth/login"); return; }
+                  try {
+                    const res = await messagesApi.createConversation({ recipient_username: profile.username, context_type: "direct" });
+                    router.push({ pathname: "/messages/[id]", params: { id: res.data.id, name: profile.name, username: profile.username, avatar: profile.avatarUrl || "" } });
+                  } catch {
+                    Alert.alert("মেসেজ খোলা যায়নি", "আবার চেষ্টা করুন।");
+                  }
+                }}
                 className="px-3.5 py-2 rounded-xl flex-row items-center border border-slate-300 bg-white shadow-xs"
               >
                 <Ionicons name="chatbubble-outline" size={15} color={Colors.textPrimary} />

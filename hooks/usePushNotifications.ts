@@ -38,7 +38,11 @@ export function usePushNotifications() {
         queryClient.invalidateQueries({ queryKey: ["notifications"] });
         queryClient.invalidateQueries({ queryKey: ["notifications-summary"] });
         queryClient.invalidateQueries({ queryKey: ["unread-notifications-count"] });
-        queryClient.invalidateQueries({ queryKey: ["conversations"] });
+        queryClient.invalidateQueries({ queryKey: ["inbox-unread-messages"] });
+        queryClient.invalidateQueries({ queryKey: ["inbox-unread-notifications"] });
+        queryClient.invalidateQueries({ queryKey: ["conversations-list"] });
+        queryClient.invalidateQueries({ queryKey: ["notifications-list"] });
+        queryClient.invalidateQueries({ queryKey: ["conversation-messages"] });
       }
     );
 

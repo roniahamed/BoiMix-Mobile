@@ -1,5 +1,10 @@
 import { useCallback } from "react";
-import { View, FlatList, Text, TouchableOpacity } from "react-native";
+import { useQueryClient } from "@tanstack/react-query";
+import { useWishlistStore } from "@/stores/wishlist-store";
+import { useAuthStore } from "@/stores/auth-store";
+import { wishlistApi } from "@/lib/api/wishlist";
+import { queryKeys } from "@/lib/api/query-keys";
+import { Alert, View, FlatList, Text, TouchableOpacity } from "react-native";
 import { BookCard, BookCardSkeleton } from "@/components/shared/BookCard";
 import { SectionHeader } from "@/components/home/SectionHeader";
 import type { BookCardBook } from "@/types/book";
@@ -21,9 +26,25 @@ export function BookHorizontalList({
   onRetry,
   seeAllRoute,
 }: Props) {
+  const queryClient = useQueryClient();
+  const bookIds = useWishlistStore((state) => state.bookIds);
+  const toggleBook = useWishlistStore((state) => state.toggleBook);
+  const user = useAuthStore((state) => state.user);
+  const handleWishlist = useCallback(async (id: string) => {
+    toggleBook(id);
+    if (user) {
+      try {
+        await wishlistApi.toggleWishlist(id);
+      } catch {
+        toggleBook(id);
+        Alert.alert("পছন্দের তালিকা", "পরিবর্তন সংরক্ষণ করা যায়নি। আবার চেষ্টা করুন।");
+      }
+    }
+    queryClient.invalidateQueries({ queryKey: queryKeys.me.wishlist() });
+  }, [toggleBook, user, queryClient]);
   const renderBookItem = useCallback(
-    ({ item }: { item: BookCardBook }) => <BookCard book={item} variant="horizontal" />,
-    []
+    ({ item }: { item: BookCardBook }) => <BookCard book={{ ...item, isWishlisted: bookIds.has(item.id) }} variant="horizontal" onWishlistToggle={handleWishlist} />,
+    [bookIds, handleWishlist]
   );
 
   if (error) {

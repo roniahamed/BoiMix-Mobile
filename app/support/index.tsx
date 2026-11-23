@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Linking,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -84,14 +85,7 @@ export default function SupportScreen() {
         },
       });
     } catch {
-      router.push({
-        pathname: "/messages/[id]",
-        params: {
-          id: "support",
-          name: "BoiMix সাপোর্ট টিম",
-          username: "support",
-        },
-      });
+      Alert.alert("সাপোর্ট চ্যাট খোলা যায়নি", "আবার চেষ্টা করুন।");
     } finally {
       setChatLoading(false);
     }

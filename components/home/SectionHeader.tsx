@@ -14,7 +14,7 @@ export function SectionHeader({ title, seeAllRoute, seeAllParams }: Props) {
 
   return (
     <View className="flex-row items-center justify-between px-4 mb-3">
-      <Text className="text-base font-bold text-text-primary">{title}</Text>
+      <View className="flex-row items-center flex-1"><View className="w-1 h-6 rounded-full bg-primary mr-2.5" /><Text className="text-lg font-bold text-text-primary">{title}</Text></View>
       {seeAllRoute && (
         <TouchableOpacity
           onPress={() =>

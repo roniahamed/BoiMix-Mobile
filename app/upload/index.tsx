@@ -41,11 +41,11 @@ const CATEGORIES = [
 ];
 
 const CONDITIONS = [
-  { id: "excellent", label: "নতুনের মতো", desc: "খুব যত্নসহকারে পড়া" },
-  { id: "good", label: "ভালো", desc: "সামান্য ব্যবহার চিহ্ন" },
-  { id: "fair", label: "চলনসই", desc: "দাগ বা পুরানো পাতা" },
-  { id: "poor", label: "পুরানো", desc: "পাতা ছেঁড়া বা দাগযুক্ত" },
-  { id: "new", label: "একদম নতুন", desc: "পড়া হয়নি, অক্ষত (প্ল্যান প্রয়োজন)" },
+  { id: "excellent", label: "Like New", desc: "খুব যত্নসহকারে পড়া" },
+  { id: "good", label: "Good", desc: "সামান্য ব্যবহার চিহ্ন" },
+  { id: "fair", label: "Fair", desc: "দাগ বা পুরানো পাতা" },
+  { id: "poor", label: "Poor", desc: "পাতা ছেঁড়া বা দাগযুক্ত" },
+  { id: "new", label: "New", desc: "পড়া হয়নি, অক্ষত (প্ল্যান প্রয়োজন)" },
 ];
 
 export default function BookUploadScreen() {

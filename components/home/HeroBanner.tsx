@@ -1,9 +1,8 @@
-import { View, Text, TouchableOpacity, Dimensions, FlatList } from "react-native";
+import { View, Text, TouchableOpacity, useWindowDimensions, FlatList } from "react-native";
 import { Image } from "expo-image";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "expo-router";
 
-const { width } = Dimensions.get("window");
 
 type BannerItem = {
   id: string;
@@ -31,11 +30,14 @@ type Props = {
 
 export function HeroBanner({ items, autoScrollInterval = 4000 }: Props) {
   const router = useRouter();
+  const { width } = useWindowDimensions();
   const [activeIndex, setActiveIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const startAutoScroll = () => {
+  const startAutoScroll = useCallback(() => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    if (items.length <= 1) return;
     timerRef.current = setInterval(() => {
       setActiveIndex((prev) => {
         const next = (prev + 1) % items.length;
@@ -43,7 +45,7 @@ export function HeroBanner({ items, autoScrollInterval = 4000 }: Props) {
         return next;
       });
     }, autoScrollInterval);
-  };
+  }, [items.length, autoScrollInterval]);
 
   useEffect(() => {
     if (items.length <= 1) return;
@@ -51,7 +53,7 @@ export function HeroBanner({ items, autoScrollInterval = 4000 }: Props) {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [items.length]);
+  }, [items.length, width, startAutoScroll]);
 
   const handleScrollBegin = () => {
     if (timerRef.current) clearInterval(timerRef.current);
@@ -64,7 +66,7 @@ export function HeroBanner({ items, autoScrollInterval = 4000 }: Props) {
   if (!items.length) return null;
 
   return (
-    <View className="mb-5">
+    <View className="mb-3">
       <FlatList
         ref={flatListRef}
         data={items}
@@ -96,29 +98,30 @@ export function HeroBanner({ items, autoScrollInterval = 4000 }: Props) {
               if (item.link) {
                 router.push(item.link as never);
               } else if (item.id === "2") {
-                router.push({ pathname: "/tabs/explore" as never, params: { mode: "exchange" } });
+                router.push({ pathname: "/search" as never, params: { mode: "exchange" } });
               } else {
-                router.push("/tabs/explore" as never);
+                router.push("/search" as never);
               }
             }}
           >
-            <View style={{ width, height: 180 }} className="relative">
+            <View style={{ width: width - 32, height: Math.min((width - 32) * 0.43, 200), marginHorizontal: 16, borderRadius: 20, overflow: "hidden" }} className="relative">
               <Image
                 source={resolveBannerSource(item.imageUrl)}
-                style={{ width, height: 180 }}
+                style={{ width: "100%", height: "100%" }}
                 contentFit="cover"
                 transition={300}
               />
-              <View className="absolute inset-0 bg-black/30" />
-              <View className="absolute bottom-4 left-4 right-4">
-                <Text className="text-white font-bold text-lg" numberOfLines={2}>
+
+              <View className="absolute top-3 bottom-3 left-5 justify-center" style={{ width: "52%" }}>
+                <Text className="text-secondary font-bold text-xl leading-6" numberOfLines={2}>
                   {item.title}
                 </Text>
                 {item.subtitle && (
-                  <Text className="text-white/80 text-sm mt-0.5" numberOfLines={1}>
+                  <Text className="text-text-primary text-sm mt-1" numberOfLines={2}>
                     {item.subtitle}
                   </Text>
                 )}
+                <View className="bg-primary rounded-full self-start px-4 py-2 mt-2"><Text className="text-white font-bold text-xs">এখনই ঘুরে দেখুন  →</Text></View>
               </View>
             </View>
           </TouchableOpacity>
@@ -127,12 +130,12 @@ export function HeroBanner({ items, autoScrollInterval = 4000 }: Props) {
 
       {/* Pagination dots */}
       {items.length > 1 && (
-        <View className="flex-row justify-center mt-2 gap-1.5">
+        <View style={{ position: "absolute", bottom: 10, left: 0, right: 0 }} className="flex-row justify-center gap-1.5">
           {items.map((_, i) => (
             <View
               key={i}
               className={`h-1.5 rounded-full ${
-                i === activeIndex ? "bg-primary w-4" : "bg-border w-1.5"
+                i === activeIndex ? "bg-primary w-1.5" : "bg-white w-1.5"
               }`}
             />
           ))}

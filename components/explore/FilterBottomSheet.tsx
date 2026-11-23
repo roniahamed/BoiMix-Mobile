@@ -23,11 +23,11 @@ const MODE_OPTIONS: { value: BookAvailabilityMode; label: string }[] = [
 ];
 
 const CONDITION_OPTIONS: { value: BookCondition; label: string }[] = [
-  { value: "new", label: "নতুন" },
-  { value: "excellent", label: "অতি উত্তম" },
-  { value: "good", label: "ভালো" },
-  { value: "fair", label: "মোটামুটি" },
-  { value: "poor", label: "খারাপ" },
+  { value: "new", label: "New" },
+  { value: "excellent", label: "Like New" },
+  { value: "good", label: "Good" },
+  { value: "fair", label: "Fair" },
+  { value: "poor", label: "Poor" },
 ];
 
 const DISTANCE_OPTIONS = [1, 5, 10, 20, 50];

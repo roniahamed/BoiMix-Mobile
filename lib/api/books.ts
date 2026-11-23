@@ -61,8 +61,20 @@ export const booksApi = {
   getBookDetail: (slug: string) =>
     apiClient.get<BookDetailResponse | BookCardBook>(API_ENDPOINTS.BOOKS.DETAIL(slug)),
 
-  getCategories: () =>
-    apiClient.get<PaginatedResponse<BookCategory>>(API_ENDPOINTS.BOOKS.CATEGORIES),
+  getCategories: (params: { page?: number; page_size?: number } = {}) =>
+    apiClient.get<PaginatedResponse<BookCategory>>(API_ENDPOINTS.BOOKS.CATEGORIES, { params }),
+
+  getAllCategories: async () => {
+    const categories: BookCategory[] = [];
+    let page = 1;
+    while (true) {
+      const response = await apiClient.get<PaginatedResponse<BookCategory> | BookCategory[]>(API_ENDPOINTS.BOOKS.CATEGORIES, { params: { page, page_size: 100 } });
+      if (Array.isArray(response.data)) return response.data;
+      categories.push(...response.data.results);
+      if (!response.data.next || response.data.results.length === 0) return categories;
+      page += 1;
+    }
+  },
 
   getNearbyBooks: (lat: number, lng: number, radius = 10) =>
     apiClient.get<PaginatedResponse<BookCardBook>>(API_ENDPOINTS.BOOKS.NEARBY, {

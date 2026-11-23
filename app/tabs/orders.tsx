@@ -131,17 +131,17 @@ export default function OrdersScreen() {
       {/* Header */}
       <View
         style={{ paddingTop: insets.top + 8 }}
-        className="bg-white px-4 pb-3 border-b border-border-light shadow-sm"
+        className="bg-surface-dark px-4 pb-3"
       >
-        <Text className="text-lg font-bold text-text-primary mb-3">
+        <Text className="text-xl font-bold text-secondary mb-3">
           অর্ডার ও লেনদেন
         </Text>
 
         {/* Segmented Control */}
-        <View className="flex-row bg-surface-dark p-1 rounded-xl">
+        <View className="flex-row bg-white p-1 rounded-2xl border border-border-light">
           <TouchableOpacity
             onPress={() => setActiveTab("purchases")}
-            className={`flex-1 py-2 items-center rounded-lg ${activeTab === "purchases" ? "bg-white shadow-sm" : ""
+            className={`flex-1 py-2 items-center rounded-lg ${activeTab === "purchases" ? "bg-primary/10" : ""
               }`}
           >
             <Text
@@ -154,7 +154,7 @@ export default function OrdersScreen() {
 
           <TouchableOpacity
             onPress={() => setActiveTab("borrows")}
-            className={`flex-1 py-2 items-center rounded-lg ${activeTab === "borrows" ? "bg-white shadow-sm" : ""
+            className={`flex-1 py-2 items-center rounded-lg ${activeTab === "borrows" ? "bg-primary/10" : ""
               }`}
           >
             <Text
@@ -167,7 +167,7 @@ export default function OrdersScreen() {
 
           <TouchableOpacity
             onPress={() => setActiveTab("exchanges")}
-            className={`flex-1 py-2 items-center rounded-lg ${activeTab === "exchanges" ? "bg-white shadow-sm" : ""
+            className={`flex-1 py-2 items-center rounded-lg ${activeTab === "exchanges" ? "bg-primary/10" : ""
               }`}
           >
             <Text
@@ -254,7 +254,7 @@ export default function OrdersScreen() {
 
                     <View className="flex-row justify-between items-center mt-3 pt-2 border-t border-border-light">
                       <Text className="text-xs text-text-muted">
-                        {new Date(item.createdAt || Date.now()).toLocaleDateString("bn-BD")}
+                        {item.createdAt ? new Date(item.createdAt).toLocaleDateString("bn-BD") : ""}
                       </Text>
                       <View className="flex-row items-center gap-2">
                         <Text className="text-sm font-bold text-primary">
@@ -432,7 +432,7 @@ export default function OrdersScreen() {
 
               <View className="flex-row justify-between items-center mt-3 pt-2 border-t border-border-light">
                 <Text className="text-xs text-text-muted">
-                  {new Date(item.createdAt || Date.now()).toLocaleDateString("bn-BD")}
+                  {item.createdAt ? new Date(item.createdAt).toLocaleDateString("bn-BD") : ""}
                 </Text>
                 <View className="flex-row items-center gap-1">
                   <Text className="text-xs font-bold text-exchange">বিনিময় বিবরণ</Text>

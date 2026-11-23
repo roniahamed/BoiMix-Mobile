@@ -4,15 +4,15 @@
  */
 export const Colors = {
   // Brand Primary: BoiMix Blue
-  primary: "#0397D3",
-  primaryLight: "#38BDF8",
-  primaryDark: "#027DB0",
-  primarySoft: "#E8F7FD",
+  primary: "#006B32",
+  primaryLight: "#46A66A",
+  primaryDark: "#005126",
+  primarySoft: "#E1F1DF",
 
   // Brand Secondary: BoiMix Navy
-  secondary: "#0B2A5B",
-  secondaryLight: "#1E3A8A",
-  secondaryDark: "#081B3A",
+  secondary: "#103B24",
+  secondaryLight: "#27573A",
+  secondaryDark: "#092A18",
 
   // Brand Accent: BoiMix Orange
   accent: "#FF9900",
@@ -26,19 +26,19 @@ export const Colors = {
 
   // Surfaces & Backgrounds
   surface: "#FFFFFF",
-  surfaceDark: "#F1F2F4",
+  surfaceDark: "#F8F6F0",
   surfaceCard: "#FFFFFF",
-  background: "#F1F2F4",
+  background: "#F8F6F0",
 
   // Text Hierarchy
-  textPrimary: "#1F2933",
-  textSecondary: "#666666",
-  textMuted: "#9C9C9C",
+  textPrimary: "#17271D",
+  textSecondary: "#59645C",
+  textMuted: "#89928B",
   textInverse: "#FFFFFF",
 
   // Borders
-  border: "#CDCDCD",
-  borderLight: "#E5E5E5",
+  border: "#DEDCD3",
+  borderLight: "#EAE8E0",
 
   // Status Colors
   success: "#33C24D",
@@ -47,12 +47,12 @@ export const Colors = {
   warningSoft: "#FFF4E0",
   error: "#DC2626",
   errorSoft: "#FEF2F2",
-  info: "#0397D3",
-  infoSoft: "#E8F7FD",
+  info: "#006B32",
+  infoSoft: "#E1F1DF",
 
   // Book Availability Modes
   sell: "#33C24D",
-  exchange: "#0397D3",
+  exchange: "#006B32",
   borrow: "#8B5CF6",
   library: "#FF9900",
 } as const;

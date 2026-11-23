@@ -10,24 +10,28 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // BoiMix Brand Colors (Mirrors web frontend design-system.css)
+        sell: "#006B32",
+        exchange: "#006B32",
+        borrow: "#8B5CF6",
+        library: "#D98200",
+        // BoiMix brand palette
         primary: {
-          DEFAULT: "#0397D3",
-          50: "#E8F7FD",
-          100: "#BAE6FD",
-          200: "#7DD3FC",
-          300: "#38BDF8",
-          400: "#0EA5E9",
-          500: "#0397D3",
-          600: "#027DB0",
-          700: "#0369A1",
-          800: "#075985",
-          900: "#0B2A5B",
+          DEFAULT: "#006B32",
+          50: "#E1F1DF",
+          100: "#CFE7CE",
+          200: "#A8D7AD",
+          300: "#46A66A",
+          400: "#278B4E",
+          500: "#006B32",
+          600: "#005126",
+          700: "#005B2D",
+          800: "#074824",
+          900: "#103B24",
         },
         secondary: {
-          DEFAULT: "#0B2A5B",
-          light: "#1E3A8A",
-          dark: "#081B3A",
+          DEFAULT: "#103B24",
+          light: "#27573A",
+          dark: "#092A18",
         },
         accent: {
           DEFAULT: "#FF9900",
@@ -37,19 +41,19 @@ module.exports = {
         },
         surface: {
           DEFAULT: "#FFFFFF",
-          dark: "#F1F2F4",
+          dark: "#F8F6F0",
           card: "#FFFFFF",
-          background: "#F1F2F4",
+          background: "#F8F6F0",
         },
         text: {
-          primary: "#1F2933",
-          secondary: "#666666",
-          muted: "#9C9C9C",
+          primary: "#17271D",
+          secondary: "#59645C",
+          muted: "#89928B",
           inverse: "#FFFFFF",
         },
         border: {
-          DEFAULT: "#CDCDCD",
-          light: "#E5E5E5",
+          DEFAULT: "#DEDCD3",
+          light: "#EAE8E0",
         },
         success: {
           DEFAULT: "#33C24D",
@@ -64,8 +68,8 @@ module.exports = {
           soft: "#FEF2F2",
         },
         info: {
-          DEFAULT: "#0397D3",
-          soft: "#E8F7FD",
+          DEFAULT: "#006B32",
+          soft: "#E1F1DF",
         },
       },
       fontFamily: {

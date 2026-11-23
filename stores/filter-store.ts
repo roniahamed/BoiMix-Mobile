@@ -75,7 +75,7 @@ export const useFilterStore = create<FilterState>()((set, get) => ({
 
   setSearchQuery: (searchQuery) => set({ searchQuery }),
 
-  resetFilters: () => set(initialState),
+  resetFilters: () => set((state) => ({ ...initialState, searchQuery: state.searchQuery })),
 
   getActiveFilterCount: () => {
     const state = get();
