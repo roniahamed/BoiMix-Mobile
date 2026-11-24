@@ -173,6 +173,7 @@ function BookCardBase({
               source={{ uri: coverUri }}
               style={{ width: "100%", height: shelfCardWidth * 1.12, borderRadius: 10, backgroundColor: "#E9E6DC" }}
               contentFit="contain"
+              cachePolicy="memory-disk"
               transition={200}
             />
           ) : (
@@ -242,6 +243,7 @@ function BookCardBase({
             source={{ uri: coverUri }}
             style={{ width: 72, height: 100, borderRadius: 8 }}
             contentFit="cover"
+            cachePolicy="memory-disk"
             transition={200}
           />
         ) : (
@@ -292,13 +294,14 @@ function BookCardBase({
         {coverUri ? (
           <Image
             source={{ uri: coverUri }}
-            style={{ width: "100%", height: gridCardWidth * 1.35, borderRadius: 10 }}
+            style={{ width: "100%", height: gridCardWidth * 1.35, borderRadius: 10, backgroundColor: "#ECEBE4" }}
             contentFit="cover"
+            cachePolicy="memory-disk"
             transition={200}
           />
         ) : (
           <View
-            style={{ width: "100%", height: gridCardWidth * 1.35, borderRadius: 10 }}
+            style={{ width: "100%", height: gridCardWidth * 1.35, borderRadius: 10, backgroundColor: "#ECEBE4" }}
             className="bg-slate-100 items-center justify-center border border-slate-200"
           >
             <Ionicons name="book-outline" size={40} color={Colors.textMuted} />

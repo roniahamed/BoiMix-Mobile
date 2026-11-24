@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { FlashList, type FlashListRef } from "@shopify/flash-list";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Location from "expo-location";
@@ -24,6 +24,7 @@ import { BookHorizontalList } from "@/components/home/BookHorizontalList";
 import { booksApi } from "@/lib/api/books";
 import { queryKeys } from "@/lib/api/query-keys";
 import { Colors } from "@/constants/theme";
+import { useBookFeedWarmup } from "@/hooks/useBookFeedWarmup";
 import { useCartStore } from "@/stores/cart-store";
 
 const MOCK_BANNERS = [
@@ -92,7 +93,8 @@ export default function HomeScreen() {
     initialPageParam: 1,
     getNextPageParam: (last, pages) => last.data.next ? pages.length + 1 : undefined,
   });
-  const feedBooks = feed.data?.pages.flatMap((page) => page.data.results) ?? [];
+  const feedBooks = useMemo(() => feed.data?.pages.flatMap((page) => page.data.results) ?? [], [feed.data]);
+  useBookFeedWarmup(feed);
 
   const { data: categoriesData } = useQuery({
     queryKey: queryKeys.books.categories(),
@@ -155,12 +157,13 @@ export default function HomeScreen() {
         data={feedBooks}
         keyExtractor={(item) => item.id}
         numColumns={2}
+        drawDistance={600}
         masonry
         optimizeItemArrangement={false}
         renderItem={({ item }) => <View className="px-1"><BookCard book={item} variant="grid" /></View>}
         contentContainerStyle={{ paddingHorizontal: 12 }}
-        onEndReached={() => { if (feed.hasNextPage && !feed.isFetching && !feed.isFetchNextPageError) feed.fetchNextPage(); }}
-        onEndReachedThreshold={0.5}
+        onEndReached={() => { if (feed.hasNextPage && !feed.isFetching && !feed.isFetchNextPageError) feed.fetchNextPage({ cancelRefetch: false }); }}
+        onEndReachedThreshold={2}
         onScroll={(event) => setShowScrollTop(event.nativeEvent.contentOffset.y > 500)}
         scrollEventThrottle={100}
         showsVerticalScrollIndicator={false}

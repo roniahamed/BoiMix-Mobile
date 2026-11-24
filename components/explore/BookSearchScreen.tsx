@@ -12,6 +12,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { FlashList } from "@shopify/flash-list";
 import { Ionicons } from "@expo/vector-icons";
 
+import { useBookFeedWarmup } from "@/hooks/useBookFeedWarmup";
 import { SearchBar } from "@/components/explore/SearchBar";
 import { FilterBottomSheet } from "@/components/explore/FilterBottomSheet";
 import { BookCard, BookCardSkeleton } from "@/components/shared/BookCard";
@@ -69,6 +70,7 @@ export default function ExploreScreen() {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
+    isFetching,
     isFetchNextPageError,
     refetch,
   } = useInfiniteQuery({
@@ -83,6 +85,7 @@ export default function ExploreScreen() {
     initialPageParam: 1,
   });
 
+  useBookFeedWarmup({ data, hasNextPage, isFetching, isFetchNextPageError, fetchNextPage });
   const books: BookCardBook[] = data?.pages.flatMap((p) => p.data.results) ?? [];
   const totalCount = data?.pages[0]?.data.count ?? 0;
 
@@ -105,7 +108,7 @@ export default function ExploreScreen() {
   };
 
   const handleLoadMore = () => {
-    if (hasNextPage && !isFetchingNextPage) fetchNextPage();
+    if (hasNextPage && !isFetching && !isFetchNextPageError) fetchNextPage({ cancelRefetch: false });
   };
 
   const renderBook = useCallback(
@@ -233,7 +236,7 @@ export default function ExploreScreen() {
       )}
 
       {/* Error */}
-      {isError && (
+      {isError && !data && (
         <View className="flex-1 items-center justify-center">
           <View className="w-16 h-16 rounded-full bg-red-50 items-center justify-center mb-3">
             <Ionicons name="alert-circle-outline" size={32} color={Colors.error} />
@@ -249,7 +252,7 @@ export default function ExploreScreen() {
       {isLoading && renderSkeletons()}
 
       {/* Book List */}
-      {!isLoading && !isError && (
+      {!isLoading && (!isError || data) && (
         <FlashList
           data={books}
           keyExtractor={(item) => item.id}
@@ -260,7 +263,8 @@ export default function ExploreScreen() {
           key={viewMode}
           contentContainerStyle={{ paddingHorizontal: viewMode === "grid" ? 12 : 16, paddingTop: 4 }}
           onEndReached={handleLoadMore}
-          onEndReachedThreshold={0.3}
+          onEndReachedThreshold={2}
+          drawDistance={600}
           ListEmptyComponent={renderEmpty}
           ListFooterComponent={renderFooter}
           showsVerticalScrollIndicator={false}

@@ -12,9 +12,10 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import * as Location from "expo-location";
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 
+import { useBookFeedWarmup } from "@/hooks/useBookFeedWarmup";
 import { Colors } from "@/constants/theme";
 import { booksApi } from "@/lib/api/books";
 import { BookCard } from "@/components/shared/BookCard";
@@ -93,31 +94,28 @@ export default function NearMeScreen() {
     return () => clearTimeout(timer);
   }, [requestLocation]);
 
-  // Fetch nearby books
-  const {
-    data: booksData,
-    isLoading,
-    isError,
-    refetch,
-  } = useQuery({
+  // Fetch nearby books in pages, keeping one page ready ahead of the reader.
+  const feed = useInfiniteQuery({
     queryKey: ["books", "nearby-screen", coords?.lat, coords?.lng, radius],
-    queryFn: async () => {
-      if (!coords) return [];
-      const res = await booksApi.getNearbyBooks(coords.lat, coords.lng, radius);
-      return res.data?.results ?? [];
+    queryFn: ({ pageParam }) => {
+      if (!coords) throw new Error("লোকেশন পাওয়া যায়নি");
+      return booksApi.getNearbyBooks(coords.lat, coords.lng, radius, pageParam, 20);
     },
+    initialPageParam: 1,
+    getNextPageParam: (last) => last.data.page * last.data.page_size < last.data.count && last.data.results.length > 0 ? last.data.page + 1 : undefined,
     enabled: !!coords,
   });
+  useBookFeedWarmup(feed);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await refetch();
+    await feed.refetch();
     setRefreshing(false);
   };
 
-  const books: BookCardBook[] = (booksData ?? []).filter((b) => {
+  const books: BookCardBook[] = (feed.data?.pages.flatMap((page) => page.data.results) ?? []).filter((book) => {
     if (!selectedMode) return true;
-    return b.availabilityMode === selectedMode;
+    return book.availabilityMode === selectedMode;
   });
 
   const renderBookItem = useCallback(
@@ -239,17 +237,17 @@ export default function NearMeScreen() {
       ) : null}
 
       {/* Book List / States */}
-      {isLoading ? (
+      {feed.isLoading || !coords ? (
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator size="large" color={Colors.primary} />
           <Text className="text-sm text-text-muted mt-3">আশেপাশের বই খোঁজা হচ্ছে...</Text>
         </View>
-      ) : isError ? (
+      ) : feed.isError && !feed.data ? (
         <View className="flex-1 items-center justify-center p-6">
           <Ionicons name="cloud-offline-outline" size={40} color={Colors.textMuted} />
           <Text className="text-base font-bold text-text-primary mt-3">লোড করা যায়নি</Text>
           <TouchableOpacity
-            onPress={() => refetch()}
+            onPress={() => feed.refetch()}
             className="mt-4 px-5 py-2.5 bg-primary rounded-xl"
           >
             <Text className="text-white text-xs font-bold">পুনরায় চেষ্টা করুন</Text>
@@ -266,7 +264,10 @@ export default function NearMeScreen() {
           renderItem={renderBookItem}
           initialNumToRender={8}
           maxToRenderPerBatch={10}
-          windowSize={5}
+          windowSize={9}
+          onEndReached={() => { if (feed.hasNextPage && !feed.isFetching && !feed.isFetchNextPageError) feed.fetchNextPage({ cancelRefetch: false }); }}
+          onEndReachedThreshold={2}
+          ListFooterComponent={feed.isFetchingNextPage ? <ActivityIndicator color={Colors.primary} className="my-4" /> : feed.isFetchNextPageError ? <TouchableOpacity onPress={() => feed.fetchNextPage()} className="items-center py-4"><Text className="text-primary font-semibold">আরও বই লোড হয়নি · আবার চেষ্টা করুন</Text></TouchableOpacity> : undefined}
           removeClippedSubviews={Platform.OS !== "web"}
           ListEmptyComponent={
             <View className="items-center py-20 px-6">
@@ -274,8 +275,9 @@ export default function NearMeScreen() {
                 <Ionicons name="location-outline" size={30} color={Colors.textMuted} />
               </View>
               <Text className="text-base font-bold text-text-primary text-center">
-                এই দূরত্বের মধ্যে কোনো বই নেই
+                {feed.hasNextPage ? "এই পেজে কোনো বই পাওয়া যায়নি" : "এই দূরত্বের মধ্যে কোনো বই নেই"}
               </Text>
+              {feed.hasNextPage && <TouchableOpacity onPress={() => feed.fetchNextPage({ cancelRefetch: false })} disabled={feed.isFetching} className="mt-3"><Text className="text-primary font-semibold">আরও বই দেখুন</Text></TouchableOpacity>}
               <Text className="text-xs text-text-secondary text-center mt-1">
                 ব্যাসার্ধ বাড়িয়ে ২০ বা ৫০ কিমি নির্বাচন করে দেখতে পারেন
               </Text>

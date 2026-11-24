@@ -9,6 +9,8 @@ export type PaginatedResponse<T> = {
   results: T[];
 };
 
+export type NearbyBooksResponse = { count: number; page: number; page_size: number; results: BookCardBook[] };
+
 export type BookListParams = {
   type?: string;
   category?: string;
@@ -84,9 +86,9 @@ export const booksApi = {
     }
   },
 
-  getNearbyBooks: (lat: number, lng: number, radius = 10) =>
-    apiClient.get<PaginatedResponse<BookCardBook>>(API_ENDPOINTS.BOOKS.NEARBY, {
-      params: { lat, lng, radius },
+  getNearbyBooks: (lat: number, lng: number, radius = 10, page = 1, pageSize = 20) =>
+    apiClient.get<NearbyBooksResponse>(API_ENDPOINTS.BOOKS.NEARBY, {
+      params: { lat, lng, radius_km: radius, page, page_size: pageSize },
     }),
 
   getByISBN: (isbn: string) =>

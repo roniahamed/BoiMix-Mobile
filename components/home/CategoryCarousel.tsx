@@ -1,7 +1,8 @@
 import { useCallback, useMemo } from "react";
 import { Text, TouchableOpacity, useWindowDimensions } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
-import Animated, { scrollTo, useAnimatedRef, useAnimatedScrollHandler, useFrameCallback, useReducedMotion, useSharedValue } from "react-native-reanimated";
+import Animated, { cancelAnimation, scrollTo, useAnimatedRef, useFrameCallback, useReducedMotion, useSharedValue, withDecay } from "react-native-reanimated";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/theme";
 import type { BookCategory } from "@/types/book";
@@ -35,30 +36,60 @@ export function CategoryCarousel({ categories }: { categories: BookCategory[] })
   const scrollRef = useAnimatedRef<Animated.ScrollView>();
   const offset = useSharedValue(0);
   const focused = useSharedValue(false);
-  const dragging = useSharedValue(false);
   const touching = useSharedValue(false);
+  const coasting = useSharedValue(false);
+  const gestureStart = useSharedValue(0);
 
   useFocusEffect(useCallback(() => {
     focused.set(true);
-    return () => { focused.set(false); };
-  }, [focused]));
+    return () => { focused.set(false); cancelAnimation(offset); coasting.set(false); };
+  }, [focused, offset, coasting]));
 
   useFrameCallback((frame) => {
-    if (!focused.get() || touching.get() || dragging.get() || reducedMotion || sorted.length === 0) return;
+    if (!focused.get() || touching.get() || sorted.length === 0) return;
+    if (coasting.get()) {
+      const position = cycle + (((offset.get() % cycle) + cycle) % cycle);
+      scrollTo(scrollRef, position, 0, false);
+      return;
+    }
+    if (reducedMotion) return;
     const next = cycle + ((offset.get() + Math.min(frame.timeSincePreviousFrame ?? 0, 40) * 0.018) % cycle);
     offset.set(next);
     scrollTo(scrollRef, next, 0, false);
   });
 
-  const scrollHandler = useAnimatedScrollHandler({
-    onBeginDrag: () => { dragging.set(true); },
-    onScroll: (event) => { if (dragging.get()) offset.set(event.contentOffset.x); },
-    onEndDrag: (event) => { if (Math.abs(event.velocity?.x ?? 0) < 0.05) { offset.set(cycle + (((event.contentOffset.x % cycle) + cycle) % cycle)); dragging.set(false); } },
-    onMomentumEnd: (event) => { offset.set(cycle + (((event.contentOffset.x % cycle) + cycle) % cycle)); dragging.set(false); },
-  });
+  const pan = useMemo(() => Gesture.Pan()
+    .activeOffsetX([-6, 6])
+    .failOffsetY([-12, 12])
+    .onBegin(() => {
+      touching.set(true);
+      cancelAnimation(offset);
+      coasting.set(false);
+      gestureStart.set(offset.get());
+    })
+    // Reanimated resolves this animated ref only when the gesture runs on the UI thread.
+    // eslint-disable-next-line react-hooks/refs
+    .onUpdate((event) => {
+      const next = cycle + (((gestureStart.get() - event.translationX) % cycle + cycle) % cycle);
+      offset.set(next);
+      scrollTo(scrollRef, next, 0, false);
+    })
+    .onEnd((event) => {
+      if (reducedMotion || Math.abs(event.velocityX) < 80) return;
+      coasting.set(true);
+      const velocity = Math.max(-2200, Math.min(2200, -event.velocityX));
+      offset.set(withDecay({ velocity, deceleration: 0.99 }, (finished) => {
+        if (finished) {
+          offset.set(cycle + (((offset.get() % cycle) + cycle) % cycle));
+          coasting.set(false);
+        }
+      }));
+    })
+    .onFinalize(() => { touching.set(false); }), [cycle, gestureStart, offset, scrollRef, touching, coasting, reducedMotion]);
 
   return (
-    <Animated.ScrollView ref={scrollRef} horizontal showsHorizontalScrollIndicator={false} onTouchStart={() => touching.set(true)} onTouchEnd={() => touching.set(false)} onTouchCancel={() => { touching.set(false); dragging.set(false); }} onScroll={scrollHandler} scrollEventThrottle={16} contentContainerStyle={{ paddingHorizontal: 16 }} style={{ marginBottom: 12 }}>
+    <GestureDetector gesture={pan} touchAction="pan-y">
+    <Animated.ScrollView ref={scrollRef} horizontal scrollEnabled={false} showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16 }} style={{ marginBottom: 12 }}>
       {repeated.map(({ category, key }) => {
         const group = category ? priority(category) : -1;
         const icon = group === 0 || group === 1 || group === 2 || group === 3 ? "school-outline" : group === 5 ? "library-outline" : "book-outline";
@@ -67,5 +98,6 @@ export function CategoryCarousel({ categories }: { categories: BookCategory[] })
         </TouchableOpacity>;
       })}
     </Animated.ScrollView>
+    </GestureDetector>
   );
 }

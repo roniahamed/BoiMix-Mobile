@@ -7,6 +7,7 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 
+import { useBookFeedWarmup } from "@/hooks/useBookFeedWarmup";
 import { Colors } from "@/constants/theme";
 import { AddToCartButton } from "@/components/shared/AddToCartButton";
 import { booksApi } from "@/lib/api/books";
@@ -35,6 +36,7 @@ export default function CategoriesScreen() {
     initialPageParam: 1,
     getNextPageParam: (last, pages) => last.data.next ? pages.length + 1 : undefined,
   });
+  useBookFeedWarmup(books);
   const selectedName = categories.data?.find((category) => category.slug === selected);
   const title = selectedName ? categoryName(selectedName) : "সব বই";
   const items = books.data?.pages.flatMap((page) => page.data.results) ?? [];
@@ -45,7 +47,7 @@ export default function CategoriesScreen() {
       <View style={{ width: "100%", padding: 4 }}>
         <TouchableOpacity onPress={() => router.push(`/book/${item.slug || item.id}` as never)} activeOpacity={0.85} className="bg-white rounded-xl border border-border-light overflow-hidden h-full">
           <View className="bg-surface-dark items-center justify-center" style={{ height: 145 }}>
-            {cover ? <Image source={{ uri: cover }} style={{ width: "100%", height: "100%" }} contentFit="contain" /> : <Ionicons name="book-outline" size={34} color={Colors.textMuted} />}
+            {cover ? <Image source={{ uri: cover }} style={{ width: "100%", height: "100%" }} contentFit="contain" cachePolicy="memory-disk" /> : <Ionicons name="book-outline" size={34} color={Colors.textMuted} />}
           </View>
           <View className="p-2 flex-1">
             <Text className="text-sm font-bold text-text-primary" numberOfLines={2}>{item.title}</Text>
@@ -82,12 +84,12 @@ export default function CategoriesScreen() {
         <View className="flex-1">
           {books.isLoading ? <ActivityIndicator color={Colors.primary} className="mt-12" /> : books.isError && !books.data ? <View className="flex-1 items-center justify-center p-4"><Text className="text-text-secondary text-center mb-3">বই লোড করা যায়নি</Text><TouchableOpacity onPress={() => books.refetch()}><Text className="text-primary font-bold">আবার চেষ্টা করুন</Text></TouchableOpacity></View> : (
             <FlashList
-              key={selected ?? "all"} data={items} keyExtractor={(item) => item.id} numColumns={2} masonry optimizeItemArrangement={false} renderItem={renderBook}
+              key={selected ?? "all"} data={items} keyExtractor={(item) => item.id} numColumns={2} masonry drawDistance={600} optimizeItemArrangement={false} renderItem={renderBook}
               contentContainerStyle={{ padding: 8, paddingBottom: 24 }}
               showsVerticalScrollIndicator={false}
               ListHeaderComponent={<View className="mb-2"><TouchableOpacity onPress={() => router.push("/search")} className="rounded-2xl overflow-hidden mb-4" style={{ height: 112 }}><Image source={require("@/assets/banners/marketplace-hero-green.jpg")} style={{ width: "100%", height: "100%", position: "absolute" }} contentFit="cover" /><View className="justify-center px-3 h-full" style={{ width: "60%" }}><Text className="text-secondary text-base font-bold">পছন্দের বই খুঁজে নিন</Text><Text className="text-primary text-xs font-bold mt-2">বই দেখুন  →</Text></View></TouchableOpacity><View className="bg-primary/10 rounded-xl px-3 py-3 border-l-4 border-primary"><Text className="font-bold text-secondary">{title}</Text><Text className="text-xs text-text-secondary mt-1">{books.data?.pages[0]?.data.count ?? 0}টি বই</Text></View></View>}
               ListEmptyComponent={<Text className="text-text-secondary text-center mt-10">এই ক্যাটাগরিতে কোনো বই পাওয়া যায়নি</Text>}
-              onEndReached={() => { if (books.hasNextPage && !books.isFetchingNextPage && !books.isFetchNextPageError) books.fetchNextPage(); }} onEndReachedThreshold={0.4}
+              onEndReached={() => { if (books.hasNextPage && !books.isFetching && !books.isFetchNextPageError) books.fetchNextPage({ cancelRefetch: false }); }} onEndReachedThreshold={2}
               ListFooterComponent={books.isFetchingNextPage ? <ActivityIndicator color={Colors.primary} className="my-4" /> : books.isFetchNextPageError ? <TouchableOpacity onPress={() => books.fetchNextPage()} className="items-center py-4"><Text className="text-primary">আবার চেষ্টা করুন</Text></TouchableOpacity> : undefined}
             />
           )}

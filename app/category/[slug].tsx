@@ -9,16 +9,16 @@ import {
 import { FlashList } from "@shopify/flash-list";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 
+import { useBookFeedWarmup } from "@/hooks/useBookFeedWarmup";
 import { Colors } from "@/constants/theme";
 import { booksApi } from "@/lib/api/books";
 import { BookCard } from "@/components/shared/BookCard";
-import type { BookCardBook } from "@/types/book";
 
 const SORT_OPTIONS = [
-  { id: "-rating", label: "জনপ্রিয়" },
+  { id: "-owner__profile__public_rating", label: "জনপ্রিয়" },
   { id: "-created_at", label: "নতুন" },
   { id: "price", label: "মূল্য: কম" },
   { id: "-price", label: "মূল্য: বেশি" },
@@ -33,34 +33,25 @@ export default function CategoryDetailScreen() {
     nameBn?: string;
   }>();
 
-  const [ordering, setOrdering] = useState("-rating");
+  const [ordering, setOrdering] = useState("-owner__profile__public_rating");
   const [refreshing, setRefreshing] = useState(false);
 
   const displayName = nameBn || name || (slug ? slug.replace(/-/g, " ") : "ক্যাটাগরি");
 
-  const { data: books, isLoading, refetch } = useQuery<BookCardBook[]>({
+  const feed = useInfiniteQuery({
     queryKey: ["category-books", slug, ordering],
-    queryFn: async () => {
-      try {
-        if (slug) {
-          const res = await booksApi.getBooks({
-            category: slug,
-            ordering,
-            page_size: 24,
-          });
-          return res.data?.results || [];
-        }
-      } catch {
-        // fallback
-      }
-      return [];
-    },
+    queryFn: ({ pageParam }) => booksApi.getBooks({ category: slug, ordering, page: pageParam, page_size: 24 }),
+    initialPageParam: 1,
+    getNextPageParam: (last, pages) => last.data.next ? pages.length + 1 : undefined,
     enabled: !!slug,
   });
+  useBookFeedWarmup(feed);
+  const books = feed.data?.pages.flatMap((page) => page.data.results) ?? [];
+  const totalCount = feed.data?.pages[0]?.data.count;
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await refetch();
+    await feed.refetch();
     setRefreshing(false);
   };
 
@@ -77,7 +68,7 @@ export default function CategoryDetailScreen() {
               {displayName}
             </Text>
             <Text className="text-xs text-text-muted">
-              {books ? `${books.length}টি বই পাওয়া গেছে` : "বই তালিকা"}
+              {totalCount != null ? `${totalCount}টি বই পাওয়া গেছে` : "বই তালিকা"}
             </Text>
           </View>
         </View>
@@ -117,20 +108,26 @@ export default function CategoryDetailScreen() {
       </View>
 
       {/* Book Grid */}
-      {isLoading ? (
+      {feed.isLoading ? (
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator color={Colors.primary} size="large" />
           <Text className="text-xs text-text-muted mt-2">বই লোড হচ্ছে...</Text>
         </View>
+      ) : feed.isError && !feed.data ? (
+        <View className="flex-1 items-center justify-center px-6"><Text className="text-text-secondary mb-3">বই লোড করা যায়নি</Text><TouchableOpacity onPress={() => feed.refetch()}><Text className="text-primary font-bold">আবার চেষ্টা করুন</Text></TouchableOpacity></View>
       ) : (
         <FlashList
           key={slug}
-          data={books ?? []}
+          data={books}
           keyExtractor={(item) => item.id}
           numColumns={2}
+          drawDistance={600}
           masonry
           optimizeItemArrangement={false}
           contentContainerStyle={{ padding: 12, paddingBottom: insets.bottom + 40 }}
+          onEndReached={() => { if (feed.hasNextPage && !feed.isFetching && !feed.isFetchNextPageError) feed.fetchNextPage({ cancelRefetch: false }); }}
+          onEndReachedThreshold={2}
+          ListFooterComponent={feed.isFetchingNextPage ? <ActivityIndicator color={Colors.primary} className="my-4" /> : feed.isFetchNextPageError ? <TouchableOpacity onPress={() => feed.fetchNextPage()} className="items-center py-4"><Text className="text-primary font-semibold">আরও বই লোড হয়নি · আবার চেষ্টা করুন</Text></TouchableOpacity> : undefined}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
