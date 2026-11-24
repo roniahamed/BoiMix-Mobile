@@ -8,7 +8,7 @@ import {
   Alert,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useCallback } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Button } from "@/components/ui/Button";
@@ -33,65 +33,9 @@ export default function VerifyOtpScreen() {
   const [wrongAttempts, setWrongAttempts] = useState(0);
   const [locked, setLocked] = useState(false);
 
-  const inputRefs = useRef<Array<any>>(Array(OTP_LENGTH).fill(null));
+  const inputRefs = useRef<any[]>(Array(OTP_LENGTH).fill(null));
 
-  // Countdown timer
-  useEffect(() => {
-    if (cooldown <= 0) return;
-    const timer = setInterval(() => {
-      setCooldown((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [cooldown]);
-
-  // Auto-submit when all digits filled
-  useEffect(() => {
-    const code = otp.join("");
-    if (code.length === OTP_LENGTH && !code.includes("")) {
-      handleVerify(code);
-    }
-  }, [otp]);
-
-  const handleChange = (text: string, index: number) => {
-    setErrorMsg("");
-
-    // Handle paste (6 digits at once)
-    if (text.length === OTP_LENGTH) {
-      const digits = text.replace(/\D/g, "").slice(0, OTP_LENGTH).split("");
-      if (digits.length === OTP_LENGTH) {
-        setOtp(digits);
-        inputRefs.current[OTP_LENGTH - 1]?.focus();
-        return;
-      }
-    }
-
-    const digit = text.replace(/\D/g, "").slice(-1);
-    const newOtp = [...otp];
-    newOtp[index] = digit;
-    setOtp(newOtp);
-
-    // Move to next input
-    if (digit && index < OTP_LENGTH - 1) {
-      inputRefs.current[index + 1]?.focus();
-    }
-  };
-
-  const handleKeyPress = (key: string, index: number) => {
-    if (key === "Backspace" && !otp[index] && index > 0) {
-      inputRefs.current[index - 1]?.focus();
-      const newOtp = [...otp];
-      newOtp[index - 1] = "";
-      setOtp(newOtp);
-    }
-  };
-
-  const handleVerify = async (code: string) => {
+  const handleVerify = useCallback(async (code: string) => {
     if (locked) return;
     if (code.length !== OTP_LENGTH) {
       setErrorMsg("৬ সংখ্যার কোড দিন");
@@ -152,7 +96,68 @@ export default function VerifyOtpScreen() {
     } finally {
       setLoading(false);
     }
+  }, [locked, params.email, params.mode, router, setSession, wrongAttempts]);
+
+  // Countdown timer
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setInterval(() => {
+      setCooldown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [cooldown]);
+
+  // Auto-submit when all digits filled
+  useEffect(() => {
+    const code = otp.join("");
+    if (code.length === OTP_LENGTH && !code.includes("")) {
+      const timer = setTimeout(() => {
+        void handleVerify(code);
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [otp, handleVerify]);
+
+  const handleChange = (text: string, index: number) => {
+    setErrorMsg("");
+
+    // Handle paste (6 digits at once)
+    if (text.length === OTP_LENGTH) {
+      const digits = text.replace(/\D/g, "").slice(0, OTP_LENGTH).split("");
+      if (digits.length === OTP_LENGTH) {
+        setOtp(digits);
+        inputRefs.current[OTP_LENGTH - 1]?.focus();
+        return;
+      }
+    }
+
+    const digit = text.replace(/\D/g, "").slice(-1);
+    const newOtp = [...otp];
+    newOtp[index] = digit;
+    setOtp(newOtp);
+
+    // Move to next input
+    if (digit && index < OTP_LENGTH - 1) {
+      inputRefs.current[index + 1]?.focus();
+    }
   };
+
+  const handleKeyPress = (key: string, index: number) => {
+    if (key === "Backspace" && !otp[index] && index > 0) {
+      inputRefs.current[index - 1]?.focus();
+      const newOtp = [...otp];
+      newOtp[index - 1] = "";
+      setOtp(newOtp);
+    }
+  };
+
+
 
   const handleResend = async () => {
     if (cooldown > 0 || resendLoading) return;

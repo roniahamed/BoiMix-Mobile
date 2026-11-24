@@ -157,7 +157,9 @@ export default function CheckoutScreen() {
 
         if (redirectUrl && redirectUrl.startsWith("http")) {
           if (Platform.OS === "web") {
-            window.location.href = redirectUrl;
+            if (typeof window !== "undefined") {
+              window.location.assign(redirectUrl);
+            }
             return;
           } else {
             // Android Chrome Custom Tab for EPS hosted checkout

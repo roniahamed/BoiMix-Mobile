@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   View,
   Text,
@@ -62,13 +62,8 @@ export default function UserPublicProfileScreen() {
     enabled: Boolean(queryUser),
   });
 
-  const [isFollowing, setIsFollowing] = useState(profile?.isFollowing || false);
-
-  useEffect(() => {
-    if (profile) {
-      setIsFollowing(Boolean((profile as any).isFollowing));
-    }
-  }, [profile]);
+  const [isFollowingOverride, setIsFollowingOverride] = useState<boolean | null>(null);
+  const isFollowing = isFollowingOverride !== null ? isFollowingOverride : Boolean((profile as any)?.isFollowing);
 
   const formatJoinedDate = (dateStr?: string) => {
     if (!dateStr) return "সম্প্রতি";
@@ -87,10 +82,10 @@ export default function UserPublicProfileScreen() {
       return usersApi.followUser(profile.id);
     },
     onMutate: () => {
-      setIsFollowing((prev) => !prev);
+      setIsFollowingOverride((prev) => !(prev !== null ? prev : Boolean((profile as any)?.isFollowing)));
     },
     onError: () => {
-      setIsFollowing((prev) => !prev);
+      setIsFollowingOverride((prev) => !(prev !== null ? prev : Boolean((profile as any)?.isFollowing)));
       Alert.alert("ত্রুটি", "অনুরোধটি সম্পন্ন করা যায়নি।");
     },
   });

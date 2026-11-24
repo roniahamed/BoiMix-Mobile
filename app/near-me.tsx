@@ -87,7 +87,10 @@ export default function NearMeScreen() {
   }, []);
 
   useEffect(() => {
-    requestLocation();
+    const timer = setTimeout(() => {
+      requestLocation();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [requestLocation]);
 
   // Fetch nearby books

@@ -53,7 +53,7 @@ export default function SplashScreen() {
     }
 
     checkAuth();
-  }, [isHydrated]);
+  }, [isHydrated, clearSession, router]);
 
   return (
     <View className="flex-1 items-center justify-center bg-primary">
