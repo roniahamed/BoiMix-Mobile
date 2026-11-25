@@ -19,9 +19,9 @@ export function AddToCartButton({ book }: { book: BookCardBook }) {
       }}
       accessibilityRole="button"
       accessibilityLabel={`Add ${book.title} to cart`}
-      className="mt-2 border border-primary rounded-lg py-2 px-2 items-center justify-center"
+      className="mt-2 min-h-[44px] border border-primary rounded-lg py-2 px-2 items-center justify-center"
     >
-      <Text className="text-xs font-bold text-primary" numberOfLines={1}>Add to Cart</Text>
+      <Text className="text-sm font-bold text-primary" numberOfLines={1}>Add to Cart</Text>
     </TouchableOpacity>
   );
 }

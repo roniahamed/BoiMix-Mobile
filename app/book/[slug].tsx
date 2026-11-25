@@ -14,7 +14,7 @@ import {
 import * as WebBrowser from "expo-web-browser";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -36,18 +36,23 @@ import { shareContent } from "@/lib/utils/share";
 
 export default function BookDetailScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
+  return <BookDetailContent key={slug} />;
+}
+
+function BookDetailContent() {
+  const { slug } = useLocalSearchParams<{ slug: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const queryClient = useQueryClient();
 
   const user = useAuthStore((s) => s.user);
   const addToCart = useCartStore((s) => s.addItem);
   const showCartConfirmation = useCartConfirmationStore((s) => s.show);
   const { isWishlisted, toggleBook } = useWishlistStore();
 
-  const wishlisted = isWishlisted(slug ?? "");
-
   // ── Images & Gallery state ──
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [descriptionExpanded, setDescriptionExpanded] = useState(false);
   const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
 
   // ── PDF preview modal state ──
@@ -63,16 +68,12 @@ export default function BookDetailScreen() {
   const [reviewComment, setReviewComment] = useState("");
   const [submittingReview, setSubmittingReview] = useState(false);
 
-  const { data: reviewsData, refetch: refetchReviews } = useQuery<BookReviewItem[]>({
+  const { data: reviewsData, isError: reviewsError, isLoading: reviewsLoading, refetch: refetchReviews } = useQuery<BookReviewItem[]>({
     queryKey: ["book-reviews", slug],
     queryFn: async () => {
       if (!slug) return [];
-      try {
-        const res = await reviewsApi.getBookReviews(slug);
-        return res.data?.results ?? (Array.isArray(res.data) ? res.data : []);
-      } catch {
-        return [];
-      }
+      const res = await reviewsApi.getBookReviews(slug);
+      return res.data?.results ?? (Array.isArray(res.data) ? res.data : []);
     },
     enabled: !!slug,
   });
@@ -119,9 +120,7 @@ export default function BookDetailScreen() {
       setReviewComment("");
       refetchReviews();
     } catch {
-      Alert.alert("ধন্যবাদ!", "আপনার রিভিউ সফলভাবে গ্রহণ করা হয়েছে।");
-      setShowReviewModal(false);
-      setReviewComment("");
+      Alert.alert("রিভিউ জমা হয়নি", "আবার চেষ্টা করুন।");
     } finally {
       setSubmittingReview(false);
     }
@@ -179,10 +178,12 @@ export default function BookDetailScreen() {
       toggleBook(book!.id);
       Alert.alert("ব্যর্থ", "উইশলিস্ট আপডেট করা যায়নি।");
     },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: queryKeys.me.wishlist() }),
   });
 
   const handleWishlist = () => {
-    if (!user) { router.push("/auth/login"); return; }
+    if (!book || wishlistMutation.isPending) return;
+    if (!user) { toggleBook(book.id); return; }
     wishlistMutation.mutate(wishlisted);
   };
 
@@ -304,8 +305,16 @@ export default function BookDetailScreen() {
     });
   };
 
-  const isOwner = user?.id === book?.ownerId || user?.id === book?.sellerId;
+  const wishlisted = book ? isWishlisted(book.id) : false;
+  const isOwner = Boolean(user?.id && (user.id === book?.ownerId || user.id === book?.sellerId));
   const conditionLabel = BOOK_CONDITION_LABELS.find((c) => c.value === book?.condition);
+  const isOutOfStock = Boolean(book?.isOutOfStock || book?.availability === "out-of-stock");
+  const canBuy = Boolean(book && !isOutOfStock && (
+    book.availabilityMode === "sell" || (book.availabilityMode as string) === "for_sale" ||
+    !book.availabilityMode || (Number(book.price ?? 0) > 0 && book.availabilityMode !== "borrow" && book.availabilityMode !== "exchange")
+  ));
+  const canExchange = Boolean(book && !isOutOfStock && (book.availabilityMode === "exchange" || (book as any).isAvailableForExchange));
+  const canBorrow = Boolean(book && !isOutOfStock && (book.availabilityMode === "borrow" || (book as any).isAvailableForBorrow));
 
   // Extract all images (frontCover, backCover, insidePages, tocImage, indexImage, etc.)
   const allImages: { url: string; label: string }[] = [];
@@ -355,7 +364,7 @@ export default function BookDetailScreen() {
 
   return (
     <View className="flex-1 bg-white">
-      <ScrollView key={slug} showsVerticalScrollIndicator={false}>
+      <ScrollView key={slug} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
         {/* Cover / Multi-Image Carousel */}
         <View className="relative bg-surface-dark">
           {Boolean(resolveMediaUrl(allImages[activeImageIndex]?.url || book.coverUrl || (book as any).cover_image_url || (book as any).coverImage)) ? (
@@ -372,7 +381,7 @@ export default function BookDetailScreen() {
                       (book as any).coverImage
                   ),
                 }}
-                style={{ width: "100%", height: 340 }}
+                style={{ width: "100%", height: 320 }}
                 contentFit="contain"
                 transition={200}
               />
@@ -438,7 +447,7 @@ export default function BookDetailScreen() {
           </TouchableOpacity>
 
           {/* Wishlist & Share */}
-          <View style={{ top: insets.top + 8 }} className="absolute right-4 gap-2">
+          <View style={{ top: insets.top + 8 }} className="absolute right-4 flex-row gap-2">
             <TouchableOpacity
               onPress={handleWishlist}
               className="w-10 h-10 bg-black/50 rounded-full items-center justify-center shadow"
@@ -446,7 +455,7 @@ export default function BookDetailScreen() {
               <Ionicons
                 name={wishlisted ? "heart" : "heart-outline"}
                 size={20}
-                color={wishlisted ? Colors.primary : "#FFFFFF"}
+                color={wishlisted ? "#FBC5C5" : "#FFFFFF"}
               />
             </TouchableOpacity>
             <TouchableOpacity
@@ -517,7 +526,7 @@ export default function BookDetailScreen() {
                 </Text>
               </View>
             ) : null}
-            {book.isOutOfStock ? (
+            {isOutOfStock ? (
               <View className="bg-error/10 px-2.5 py-1 rounded-md">
                 <Text className="text-xs font-semibold text-error">স্টক নেই</Text>
               </View>
@@ -526,9 +535,7 @@ export default function BookDetailScreen() {
 
           {/* Title & Author */}
           <Text className="text-xl font-bold text-text-primary leading-7">{book.title}</Text>
-          <TouchableOpacity onPress={() => book.authorSlug && router.push(`/user/${book.authorSlug}` as never)}>
-            <Text className="text-sm text-primary font-medium mt-1">{book.author}</Text>
-          </TouchableOpacity>
+          <Text className="text-sm text-primary font-medium mt-1">{book.author}</Text>
 
           {/* Rating */}
           {book.rating > 0 ? (
@@ -570,62 +577,50 @@ export default function BookDetailScreen() {
             </View>
           ) : null}
 
-          {/* Action Buttons */}
-          {!isOwner ? (
-            <View className="gap-3 mb-6">
-              {(!book.isOutOfStock && (
-                book.availabilityMode === "sell" ||
-                (book.availabilityMode as string) === "for_sale" ||
-                !book.availabilityMode ||
-                (Number(book.price ?? 0) > 0 && book.availabilityMode !== "borrow" && book.availabilityMode !== "exchange")
-              )) ? (
-                <>
-                  <Button
-                    label="Add to Cart"
-                    onPress={handleAddToCart}
-                    variant="outline"
-                    leftIcon={<Ionicons name="cart-outline" size={18} color={Colors.primary} />}
-                  />
-                  <Button label="এখনই কিনুন" onPress={handleBuyNow} />
-                </>
-              ) : null}
-              {(book.availabilityMode === "exchange" || Boolean((book as any).isAvailableForExchange)) ? (
-                <Button
-                  label="বিনিময়ের প্রস্তাব পাঠান"
-                  onPress={handleExchange}
-                  leftIcon={<Ionicons name="repeat-outline" size={18} color="#FFFFFF" />}
-                />
-              ) : null}
-              {(!book.isOutOfStock && (book.availabilityMode === "borrow" || Boolean((book as any).isAvailableForBorrow))) ? (
-                <Button
-                  label="ধার নিন"
-                  onPress={handleBorrow}
-                  leftIcon={<Ionicons name="book-outline" size={18} color="#FFFFFF" />}
-                />
-              ) : null}
-              {book.isOutOfStock ? (
-                <View className="bg-surface-dark rounded-xl p-4 items-center border border-border-light">
-                  <Text className="text-sm font-semibold text-text-secondary">এই বইটি এখন স্টকে নেই</Text>
-                </View>
-              ) : null}
-              <Button
-                label={creatingChat ? "মেসেজ রুম প্রস্তুত হচ্ছে..." : "মালিককে মেসেজ দিন"}
-                onPress={handleMessageOwner}
-                loading={creatingChat}
-                variant="outline"
-                leftIcon={<Ionicons name="chatbubble-ellipses-outline" size={18} color={Colors.primary} />}
-              />
+          {isOutOfStock ? (
+            <View className="bg-error/10 rounded-xl px-4 py-3 mb-5 flex-row items-center gap-2">
+              <Ionicons name="information-circle-outline" size={18} color={Colors.error} />
+              <Text className="text-sm font-semibold text-error">এই বইটি এখন স্টকে নেই</Text>
             </View>
-          ) : (
-            <View className="gap-3 mb-6">
-              <Button
-                label="সম্পাদনা করুন"
-                onPress={() => router.push({ pathname: "/upload" as never, params: { bookId: book.id } })}
-                variant="outline"
-                leftIcon={<Ionicons name="pencil-outline" size={18} color={Colors.primary} />}
-              />
+          ) : null}
+
+          {!isOwner && canBuy && (canExchange || canBorrow) ? (
+            <View className="flex-row flex-wrap gap-2 mb-5">
+              {canExchange ? <TouchableOpacity onPress={handleExchange} accessibilityRole="button" className="border border-primary rounded-full px-4 py-2"><Text className="text-primary text-sm font-semibold">বিনিময়ের প্রস্তাব</Text></TouchableOpacity> : null}
+              {canBorrow ? <TouchableOpacity onPress={handleBorrow} accessibilityRole="button" className="border border-primary rounded-full px-4 py-2"><Text className="text-primary text-sm font-semibold">ধার নিন</Text></TouchableOpacity> : null}
             </View>
-          )}
+          ) : null}
+
+          {book.description ? (
+            <View className="mb-6 border-t border-border-light pt-5">
+              <Text className="text-base font-bold text-secondary mb-2">বই সম্পর্কে</Text>
+              <Text className="text-sm text-text-secondary leading-6" numberOfLines={descriptionExpanded ? undefined : 4}>
+                {book.description}
+              </Text>
+              {book.description.length > 180 ? (
+                <TouchableOpacity onPress={() => setDescriptionExpanded((value) => !value)} accessibilityRole="button" className="self-start mt-2 py-1">
+                  <Text className="text-sm font-bold text-primary">{descriptionExpanded ? "কম দেখুন" : "আরও পড়ুন"}</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+          ) : null}
+
+          {[book.publisher, book.language, book.pages, book.edition, book.isbn].some(Boolean) ? (
+            <View className="mb-6 border-t border-border-light pt-5">
+              <Text className="text-base font-bold text-secondary mb-3">বইয়ের তথ্য</Text>
+              <View className="bg-surface-dark rounded-2xl px-4 py-1 border border-border-light">
+                {[
+                  ["প্রকাশনী", book.publisher], ["ভাষা", book.language],
+                  ["পৃষ্ঠা", book.pages], ["সংস্করণ", book.edition], ["ISBN", book.isbn],
+                ].filter(([, value]) => value !== null && value !== undefined && value !== "" && value !== 0).map(([label, value]) => (
+                  <View key={String(label)} className="flex-row justify-between items-start py-2.5 gap-4">
+                    <Text className="text-sm text-text-secondary">{label}</Text>
+                    <Text className="text-sm font-semibold text-text-primary flex-shrink text-right">{value}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          ) : null}
 
           {/* Tags */}
           {Array.isArray(book.tags) && book.tags.length > 0 ? (
@@ -660,7 +655,9 @@ export default function BookDetailScreen() {
 
           {/* Seller / Owner Info Card */}
           {Boolean((book as any).owner || book.sellerId) ? (
-            <View className="mb-5 p-4 rounded-2xl bg-surface-dark border border-border-light">
+            <View className="mb-5">
+              <Text className="text-base font-bold text-secondary mb-3">বিক্রেতার তথ্য</Text>
+              <View className="p-4 rounded-2xl bg-surface-dark border border-border-light">
               <View className="flex-row items-center justify-between">
                 <TouchableOpacity
                   onPress={handleViewSellerProfile}
@@ -701,6 +698,7 @@ export default function BookDetailScreen() {
                   </TouchableOpacity>
                 ) : null}
               </View>
+              </View>
             </View>
           ) : null}
 
@@ -730,7 +728,7 @@ export default function BookDetailScreen() {
               <View>
                 <Text className="text-base font-bold text-text-primary">পাঠকদের রিভিউ ও রেটিং</Text>
                 <Text className="text-xs text-text-muted mt-0.5">
-                  {(reviewsData?.length ?? 0)}টি রিভিউ পাওয়া গেছে
+                  {reviewsLoading ? "রিভিউ লোড হচ্ছে..." : reviewsError ? "রিভিউ লোড করা যায়নি" : `${reviewsData?.length ?? 0}টি রিভিউ পাওয়া গেছে`}
                 </Text>
               </View>
 
@@ -744,7 +742,11 @@ export default function BookDetailScreen() {
             </View>
 
             {/* Reviews List */}
-            {reviewsData && reviewsData.length > 0 ? (
+            {reviewsLoading ? <ActivityIndicator color={Colors.primary} className="my-4" /> : reviewsError ? (
+              <TouchableOpacity onPress={() => refetchReviews()} className="bg-surface-dark rounded-2xl p-5 items-center border border-border-light">
+                <Text className="text-sm font-semibold text-primary">রিভিউ আবার লোড করুন</Text>
+              </TouchableOpacity>
+            ) : reviewsData && reviewsData.length > 0 ? (
               <View className="gap-3">
                 {reviewsData.map((rev) => (
                   <View
@@ -821,6 +823,21 @@ export default function BookDetailScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {(isOwner || canBuy || canBorrow || canExchange) ? (
+        <View style={{ paddingBottom: Math.max(insets.bottom, 12) }} className="bg-white border-t border-border-light px-4 pt-3">
+          {isOwner ? (
+            <Button label="সম্পাদনা করুন" onPress={() => router.push({ pathname: "/upload" as never, params: { bookId: book.id } })} variant="outline" leftIcon={<Ionicons name="pencil-outline" size={18} color={Colors.primary} />} />
+          ) : (
+            <View className="flex-row gap-2">
+              {canBuy ? <View className="flex-1"><Button label="Add to Cart" onPress={handleAddToCart} variant="outline" /></View> : null}
+              {canBuy ? <View className="flex-1"><Button label="এখনই কিনুন" onPress={handleBuyNow} /></View> : null}
+              {!canBuy && canExchange ? <View className="flex-1"><Button label="বিনিময়ের প্রস্তাব" onPress={handleExchange} /></View> : null}
+              {!canBuy && canBorrow ? <View className="flex-1"><Button label="ধার নিন" onPress={handleBorrow} variant={canExchange ? "outline" : "primary"} /></View> : null}
+            </View>
+          )}
+        </View>
+      ) : null}
 
       {/* Write Review Modal */}
       <Modal

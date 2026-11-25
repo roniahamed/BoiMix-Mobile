@@ -362,18 +362,17 @@ function BookCardBase({
         <ConditionBadge condition={book.condition} />
       </View>
 
-      {book.rating > 0 && (
-        <View className="mt-1">
-          <StarRating rating={book.rating} count={book.reviewCount} />
+      {book.rating > 0 || !!book.distance ? (
+        <View className="flex-row items-center justify-between gap-1 mt-1">
+          {book.rating > 0 ? <StarRating rating={book.rating} count={book.reviewCount} /> : <View />}
+          {book.distance ? (
+            <View className="flex-row items-center gap-1 flex-shrink">
+              <Ionicons name="location-outline" size={11} color={Colors.textMuted} />
+              <Text className="text-xs text-text-muted flex-shrink" numberOfLines={1}>{book.distance}</Text>
+            </View>
+          ) : null}
         </View>
-      )}
-
-      {!!book.distance && (
-        <View className="flex-row items-center gap-1 mt-1">
-          <Ionicons name="location-outline" size={11} color={Colors.textMuted} />
-          <Text className="text-xs text-text-muted">{book.distance}</Text>
-        </View>
-      )}
+      ) : null}
       <AddToCartButton book={book} />
     </TouchableOpacity>
   );

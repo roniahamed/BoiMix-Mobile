@@ -18,6 +18,12 @@ export type BookCardBook = {
   author: string;
   authorSlug?: string;
   authorNameBn?: string;
+  description?: string | null;
+  publisher?: string | null;
+  isbn?: string | null;
+  language?: string | null;
+  edition?: string | null;
+  pages?: number | null;
   coverUrl: string;
   tags: string[];
   availabilityMode?: BookAvailabilityMode;
