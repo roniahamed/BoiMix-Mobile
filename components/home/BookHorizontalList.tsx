@@ -4,7 +4,7 @@ import { useWishlistStore } from "@/stores/wishlist-store";
 import { useAuthStore } from "@/stores/auth-store";
 import { wishlistApi } from "@/lib/api/wishlist";
 import { queryKeys } from "@/lib/api/query-keys";
-import { Alert, View, FlatList, Text, TouchableOpacity } from "react-native";
+import { Alert, View, FlatList, Platform, ScrollView, Text, TouchableOpacity } from "react-native";
 import { BookCard, BookCardSkeleton } from "@/components/shared/BookCard";
 import { SectionHeader } from "@/components/home/SectionHeader";
 import type { BookCardBook } from "@/types/book";
@@ -67,14 +67,18 @@ export function BookHorizontalList({
     return (
       <View className="mb-5">
         <SectionHeader title={title} />
-        <FlatList
+        {Platform.OS === "web" ? (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16 }}>
+            {Array.from({ length: 5 }, (_, index) => <BookCardSkeleton key={index} variant="horizontal" />)}
+          </ScrollView>
+        ) : <FlatList
           data={Array(5).fill(null)}
           keyExtractor={(_, i) => String(i)}
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ paddingHorizontal: 16 }}
           renderItem={() => <BookCardSkeleton variant="horizontal" />}
-        />
+        />}
       </View>
     );
   }
@@ -84,7 +88,11 @@ export function BookHorizontalList({
   return (
     <View className="mb-5">
       <SectionHeader title={title} seeAllRoute={seeAllRoute} />
-      <FlatList
+      {Platform.OS === "web" ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16 }}>
+          {books.map((item) => <BookCard key={item.id} book={{ ...item, isWishlisted: bookIds.has(item.id) }} variant="horizontal" onWishlistToggle={handleWishlist} />)}
+        </ScrollView>
+      ) : <FlatList
         data={books}
         keyExtractor={(item) => item.id}
         horizontal
@@ -94,7 +102,7 @@ export function BookHorizontalList({
         initialNumToRender={5}
         maxToRenderPerBatch={5}
         windowSize={3}
-      />
+      />}
     </View>
   );
 }

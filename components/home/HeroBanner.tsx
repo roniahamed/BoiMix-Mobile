@@ -105,7 +105,7 @@ export function HeroBanner({ items, autoScrollInterval = 4000 }: Props) {
                 <Text className="text-secondary font-bold text-xl leading-6" numberOfLines={2}>
                   {item.title}
                 </Text>
-                {item.subtitle && (
+                {!!item.subtitle && (
                   <Text className="text-text-primary text-sm mt-1" numberOfLines={2}>
                     {item.subtitle}
                   </Text>

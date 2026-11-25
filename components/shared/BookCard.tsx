@@ -195,7 +195,7 @@ function BookCardBase({
               <Text className="text-white text-xs font-bold">স্টক নেই</Text>
             </View>
           )}
-          {book.condition && (
+          {!!book.condition && (
             <View className="absolute bottom-1.5 left-1.5"><ConditionBadge condition={book.condition} /></View>
           )}
           {/* Wishlist */}
@@ -269,7 +269,7 @@ function BookCardBase({
               <ConditionBadge condition={book.condition} />
             </View>
           </View>
-          {book.distance && (
+          {!!book.distance && (
             <View className="flex-row items-center gap-1 mt-1">
               <Ionicons name="location-outline" size={12} color={Colors.textMuted} />
               <Text className="text-xs text-text-muted">{book.distance}</Text>
@@ -323,7 +323,7 @@ function BookCardBase({
           </View>
         )}
 
-        {book.availabilityMode && (
+        {!!book.availabilityMode && (
           <View className="absolute top-2 left-2">
             <AvailabilityBadge mode={book.availabilityMode} />
           </View>
@@ -368,7 +368,7 @@ function BookCardBase({
         </View>
       )}
 
-      {book.distance && (
+      {!!book.distance && (
         <View className="flex-row items-center gap-1 mt-1">
           <Ionicons name="location-outline" size={11} color={Colors.textMuted} />
           <Text className="text-xs text-text-muted">{book.distance}</Text>
