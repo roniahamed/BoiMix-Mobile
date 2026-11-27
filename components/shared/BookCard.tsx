@@ -217,7 +217,7 @@ function BookCardBase({
           {book.title}
         </Text>
         <Text className="text-xs text-text-secondary mt-0.5" numberOfLines={1}>
-          {book.author}
+          {book.hasPreviewPdf ? <Text className="font-bold text-primary">PDF · </Text> : null}{book.author}
         </Text>
         <View className="mt-auto pt-2">
           <PriceTag book={book} />
@@ -262,7 +262,7 @@ function BookCardBase({
             <Text className="text-sm font-semibold text-text-primary leading-5" numberOfLines={2}>
               {book.title}
             </Text>
-            <Text className="text-xs text-text-secondary mt-0.5">{book.author}</Text>
+            <Text className="text-xs text-text-secondary mt-0.5">{book.hasPreviewPdf ? <Text className="font-bold text-primary">PDF · </Text> : null}{book.author}</Text>
             <StarRating rating={book.rating} count={book.reviewCount} />
           </View>
           <View className="flex-row items-center justify-between mt-1">
@@ -355,7 +355,7 @@ function BookCardBase({
         {book.title}
       </Text>
       <Text className="text-xs text-text-secondary mt-0.5" numberOfLines={1}>
-        {book.author}
+        {book.hasPreviewPdf ? <Text className="font-bold text-primary">PDF · </Text> : null}{book.author}
       </Text>
 
       {book.isVerifiedUser && <View className="flex-row items-center mt-1"><Ionicons name="checkmark-circle" size={13} color={Colors.primary} /><Text className="text-[10px] text-primary ml-1">Verified seller</Text></View>}

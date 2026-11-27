@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -9,16 +9,20 @@ import {
   Modal,
   TextInput,
   Platform,
-  Linking,
+  PanResponder,
 } from "react-native";
-import * as WebBrowser from "expo-web-browser";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import Animated, { FadeInDown, ReduceMotion } from "react-native-reanimated";
 import { Image } from "expo-image";
+import { WebView } from "react-native-webview";
 import { Ionicons } from "@expo/vector-icons";
 
+import { BookHorizontalList } from "@/components/home/BookHorizontalList";
 import { Button } from "@/components/ui/Button";
+import { pdfReaderHtml } from "@/lib/utils/pdf-reader";
 import { BookCard } from "@/components/shared/BookCard";
 import { booksApi } from "@/lib/api/books";
 import { queryKeys } from "@/lib/api/query-keys";
@@ -35,6 +39,8 @@ import { reviewsApi, type BookReviewItem } from "@/lib/api/reviews";
 import { shareContent } from "@/lib/utils/share";
 import { isCartReadyForCurrentAccount } from "@/lib/cart-ready";
 
+const coverEntrance = FadeInDown.duration(340).reduceMotion(ReduceMotion.System);
+
 export default function BookDetailScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   return <BookDetailContent key={slug} />;
@@ -44,8 +50,14 @@ function BookDetailContent() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const [isFocused, setIsFocused] = useState(false);
+  useFocusEffect(useCallback(() => {
+    setIsFocused(true);
+    return () => setIsFocused(false);
+  }, []));
 
   const user = useAuthStore((s) => s.user);
+  const cartCount = useCartStore((state) => state.scopeId === (user?.id ?? null) ? state.items.reduce((sum, item) => sum + item.quantity, 0) : 0);
   const addToCart = useCartStore((s) => s.addItem);
   const showCartConfirmation = useCartConfirmationStore((s) => s.show);
   const bookIds = useWishlistStore((state) => state.bookIds);
@@ -58,7 +70,7 @@ function BookDetailContent() {
 
   // ── PDF preview modal state ──
   const [showPdfModal, setShowPdfModal] = useState(false);
-  const [pdfViewerMode, setPdfViewerMode] = useState<"google" | "direct">("google");
+  const [pdfRetry, setPdfRetry] = useState(0);
 
   // ── Chat creation state ──
   const [creatingChat, setCreatingChat] = useState(false);
@@ -139,12 +151,13 @@ function BookDetailContent() {
           const owner = (d as any).owner;
           return {
             ...b,
+            recommended: d.recommended,
             owner,
             sellerId: b.sellerId || owner?.id,
             ownerId: b.ownerId || owner?.id,
             sellerName: owner?.name || owner?.username,
             sellerUsername: owner?.username,
-          } as BookCardBook & { owner?: any; sellerName?: string; sellerUsername?: string };
+          } as BookCardBook & { recommended?: BookCardBook[]; owner?: any; sellerName?: string; sellerUsername?: string };
         }
         return d as BookCardBook;
       } catch (err) {
@@ -255,25 +268,18 @@ function BookDetailContent() {
     }
   };
 
-  const handleOpenPdfPreview = async () => {
-    if (!book) return;
-    const rawPdf = book.previewPdfUrl || (book as any).preview_pdf_url;
-    if (!rawPdf) {
+  const rawPreviewUrl = resolveMediaUrl(book?.previewPdfUrl || (book as any)?.preview_pdf_url);
+  // Cloudinary serves PDF-compatible Illustrator uploads with the requested delivery format.
+  const previewUrl = /^https:\/\/res\.cloudinary\.com\/[^/]+\/image\/upload\//i.test(rawPreviewUrl)
+    ? rawPreviewUrl.replace(/\.ai(?=$|[?#])/i, ".pdf")
+    : rawPreviewUrl;
+
+  const handleOpenPdfPreview = () => {
+    if (!previewUrl) {
       Alert.alert("দুঃখিত", "এই বইটির কোনো প্রিভিউ পিডিএফ পাওয়া যায়নি।");
       return;
     }
-    const fullUrl = resolveMediaUrl(rawPdf);
-    if (Platform.OS === "web") {
-      setShowPdfModal(true);
-    } else {
-      try {
-        await WebBrowser.openBrowserAsync(fullUrl);
-      } catch {
-        Linking.openURL(fullUrl).catch(() => {
-          setShowPdfModal(true);
-        });
-      }
-    }
+    setShowPdfModal(true);
   };
 
   const handleShare = async () => {
@@ -321,6 +327,18 @@ function BookDetailContent() {
     allImages.push({ url: book.coverUrl, label: "মূল প্রচ্ছদ" });
   }
 
+  const imageCount = allImages.length;
+  const swipeResponder = useMemo(() => PanResponder.create({
+    onMoveShouldSetPanResponder: (_, gesture) =>
+      imageCount > 1 && Math.abs(gesture.dx) > 12 && Math.abs(gesture.dx) > Math.abs(gesture.dy) * 1.3,
+    onPanResponderRelease: (_, gesture) => {
+      if (Math.abs(gesture.dx) < 40) return;
+      setActiveImageIndex((current) =>
+        Math.max(0, Math.min(imageCount - 1, current + (gesture.dx < 0 ? 1 : -1)))
+      );
+    },
+  }), [imageCount]);
+
   // ── Loading ───────────────────────────────────────────────────────────────
   if (isLoading) {
     return (
@@ -348,32 +366,58 @@ function BookDetailContent() {
   }
 
   return (
-    <View className="flex-1 bg-white">
-      <ScrollView key={slug} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
+    <View className="flex-1 bg-surface-dark">
+      {isFocused ? <StatusBar style="dark" /> : null}
+      <View style={{ backgroundColor: Colors.background, paddingTop: insets.top + 4, paddingBottom: 14 }} className="flex-row items-center px-2">
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel="ফিরে যান" onPress={() => router.back()} className="w-11 h-11 items-center justify-center">
+          <Ionicons name="arrow-back" size={23} color={Colors.secondary} />
+        </TouchableOpacity>
+        <View className="flex-1 ml-1">
+          <Image source={require("@/assets/images/boimix-logo-transparent.png")} style={{ width: "100%", maxWidth: 118, height: 40 }} contentFit="contain" accessibilityLabel="BoiMix" />
+        </View>
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel="সার্চ" onPress={() => router.push("/search")} className="w-11 h-11 items-center justify-center">
+          <Ionicons name="search-outline" size={22} color={Colors.secondary} />
+        </TouchableOpacity>
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel={`কার্ট, ${cartCount}টি বই`} onPress={() => router.push("/cart")} className="w-11 h-11 items-center justify-center">
+          <Ionicons name="cart-outline" size={24} color={Colors.secondary} />
+          {cartCount > 0 ? <View className="absolute right-0 top-0 rounded-full bg-error px-1"><Text className="text-xs font-bold text-white">{cartCount > 9 ? "9+" : cartCount}</Text></View> : null}
+        </TouchableOpacity>
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel="উইশলিস্ট" accessibilityState={{ selected: wishlisted }} onPress={handleWishlist} className="w-11 h-11 items-center justify-center">
+          <Ionicons name={wishlisted ? "heart" : "heart-outline"} size={23} color={Colors.secondary} />
+        </TouchableOpacity>
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel="শেয়ার করুন" onPress={handleShare} className="w-11 h-11 items-center justify-center">
+          <Ionicons name="share-social-outline" size={22} color={Colors.secondary} />
+        </TouchableOpacity>
+
+      </View>
+      <ScrollView key={slug} style={{ backgroundColor: Colors.background }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
         {/* Cover / Multi-Image Carousel */}
-        <View className="relative bg-surface-dark">
+        <View className="relative bg-surface-dark overflow-hidden py-4">
+          <View pointerEvents="none" style={{ position: "absolute", alignSelf: "center", top: 45, width: 245, height: 155, borderRadius: 75, backgroundColor: "#EFF4EF", transform: [{ rotate: "12deg" }] }} />
           {Boolean(resolveMediaUrl(allImages[activeImageIndex]?.url || book.coverUrl || (book as any).cover_image_url || (book as any).coverImage)) ? (
-            <TouchableOpacity
-              activeOpacity={0.95}
-              onPress={() => setFullScreenImage(allImages[activeImageIndex]?.url || book.coverUrl || (book as any).cover_image_url || (book as any).coverImage)}
-            >
-              <Image
-                source={{
-                  uri: resolveMediaUrl(
-                    allImages[activeImageIndex]?.url ||
-                      book.coverUrl ||
-                      (book as any).cover_image_url ||
-                      (book as any).coverImage
-                  ),
-                }}
-                style={{ width: "100%", height: 320 }}
-                contentFit="contain"
-                transition={200}
-              />
-            </TouchableOpacity>
+            <Animated.View key={activeImageIndex} entering={coverEntrance} {...swipeResponder.panHandlers}>
+              <TouchableOpacity
+                activeOpacity={0.95}
+                onPress={() => setFullScreenImage(allImages[activeImageIndex]?.url || book.coverUrl || (book as any).cover_image_url || (book as any).coverImage)}
+              >
+                <Image
+                  source={{
+                    uri: resolveMediaUrl(
+                      allImages[activeImageIndex]?.url ||
+                        book.coverUrl ||
+                        (book as any).cover_image_url ||
+                        (book as any).coverImage
+                    ),
+                  }}
+                  style={{ width: "100%", height: 230 }}
+                  contentFit="contain"
+                  transition={200}
+                />
+              </TouchableOpacity>
+            </Animated.View>
           ) : (
             <View
-              style={{ width: "100%", height: 300 }}
+              style={{ width: "100%", height: 230 }}
               className="bg-slate-100 items-center justify-center border-b border-border-light"
             >
               <Ionicons name="book-outline" size={60} color={Colors.textMuted} />
@@ -422,34 +466,7 @@ function BookDetailContent() {
             </>
           )}
 
-          {/* Back Button */}
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={{ top: insets.top + 8 }}
-            className="absolute left-4 w-10 h-10 bg-black/50 rounded-full items-center justify-center shadow"
-          >
-            <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
-          </TouchableOpacity>
 
-          {/* Wishlist & Share */}
-          <View style={{ top: insets.top + 8 }} className="absolute right-4 flex-row gap-2">
-            <TouchableOpacity
-              onPress={handleWishlist}
-              className="w-10 h-10 bg-black/50 rounded-full items-center justify-center shadow"
-            >
-              <Ionicons
-                name={wishlisted ? "heart" : "heart-outline"}
-                size={20}
-                color={wishlisted ? "#FBC5C5" : "#FFFFFF"}
-              />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={handleShare}
-              className="w-10 h-10 bg-black/50 rounded-full items-center justify-center shadow"
-            >
-              <Ionicons name="share-social-outline" size={20} color="#FFFFFF" />
-            </TouchableOpacity>
-          </View>
         </View>
 
         {/* Thumbnails row if multiple images */}
@@ -458,7 +475,7 @@ function BookDetailContent() {
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 10, gap: 10 }}
-            className="bg-white border-b border-border-light"
+            className="bg-surface-dark border-b border-border-light"
           >
             {allImages.map((img, idx) => {
               const isSelected = activeImageIndex === idx;
@@ -487,7 +504,20 @@ function BookDetailContent() {
           </ScrollView>
         ) : null}
 
+        {previewUrl ? (
+          <TouchableOpacity accessibilityRole="button" onPress={handleOpenPdfPreview}
+            className="mx-5 mt-3 rounded-xl bg-primary flex-row items-center justify-center gap-2 py-3">
+            <Ionicons name="book-outline" size={21} color="#FFFFFF" />
+            <Text className="text-white text-base font-bold">একটু পড়ে দেখুন</Text>
+            <Ionicons name="chevron-forward" size={18} color="#FFFFFF" />
+          </TouchableOpacity>
+        ) : null}
+
         <View className="p-5">
+          {/* Title & Author */}
+          <Text className="text-2xl font-bold text-text-primary leading-8">{book.title}</Text>
+          <Text className="text-sm text-primary font-medium mt-1 mb-3">{book.author}</Text>
+
           {/* Badges row */}
           <View className="flex-row gap-2 mb-3 flex-wrap">
             {book.availabilityMode ? (
@@ -504,23 +534,12 @@ function BookDetailContent() {
                 </Text>
               </View>
             ) : null}
-            {conditionLabel ? (
-              <View style={{ backgroundColor: conditionLabel.color + "20" }} className="px-2.5 py-1 rounded-md">
-                <Text style={{ color: conditionLabel.color }} className="text-xs font-semibold">
-                  {conditionLabel.label}
-                </Text>
-              </View>
-            ) : null}
             {isOutOfStock ? (
               <View className="bg-error/10 px-2.5 py-1 rounded-md">
                 <Text className="text-xs font-semibold text-error">স্টক নেই</Text>
               </View>
             ) : null}
           </View>
-
-          {/* Title & Author */}
-          <Text className="text-xl font-bold text-text-primary leading-7">{book.title}</Text>
-          <Text className="text-sm text-primary font-medium mt-1">{book.author}</Text>
 
           {/* Rating */}
           {book.rating > 0 ? (
@@ -532,30 +551,90 @@ function BookDetailContent() {
           ) : null}
 
           {/* Price */}
-          <View className="mt-3 mb-5 py-2 border-y border-border-light">
+          <View className="flex-row flex-wrap items-center justify-between gap-2 mt-3 mb-4 py-3 border-y border-border-light">
             {book.availabilityMode === "borrow" ? (
               <Text className="text-2xl font-bold text-borrow">ধার নিন</Text>
             ) : book.availabilityMode === "exchange" ? (
               <Text className="text-2xl font-bold text-exchange">বিনিময় করুন</Text>
             ) : Number(book.price ?? 0) > 0 ? (
-              <View className="flex-row items-center gap-2">
+              <View className="flex-row flex-wrap items-center gap-2">
                 <Text className="text-2xl font-bold text-primary">৳{Number(book.price)}</Text>
                 {Number(book.originalPrice ?? 0) > Number(book.price ?? 0) ? (
-                  <Text className="text-base text-text-muted line-through">
-                    ৳{Number(book.originalPrice)}
-                  </Text>
+                  <>
+                    <Text className="text-base text-text-muted line-through">৳{Number(book.originalPrice)}</Text>
+                    <View className="bg-primary/10 rounded-full px-2.5 py-1">
+                      <Text className="text-xs font-bold text-primary">
+                        {Math.round((1 - Number(book.price) / Number(book.originalPrice)) * 100)}% ছাড়
+                      </Text>
+                    </View>
+                  </>
                 ) : null}
               </View>
             ) : (
               <Text className="text-2xl font-bold text-success">বিনামূল্যে</Text>
             )}
+            {conditionLabel ? (
+              <View style={{ backgroundColor: conditionLabel.color + "20" }} className="px-2.5 py-1 rounded-md">
+                <Text style={{ color: conditionLabel.color }} className="text-xs font-semibold">
+                  {conditionLabel.label}
+                </Text>
+              </View>
+            ) : null}
           </View>
+
+          {/* Seller / Owner Info Card */}
+          {Boolean((book as any).owner || book.sellerId) ? (
+            <View className="mb-2">
+              <View className="p-4 rounded-2xl bg-primary/5 border border-primary/10">
+              <View className="flex-row items-center justify-between">
+                <TouchableOpacity
+                  onPress={handleViewSellerProfile}
+                  activeOpacity={0.7}
+                  className="flex-row items-center flex-1 mr-2"
+                >
+                  <View className="w-12 h-12 rounded-full bg-primary/10 items-center justify-center mr-3 overflow-hidden border border-primary/20">
+                    {(book as any).owner?.avatarUrl ? (
+                      <Image
+                        source={{ uri: resolveMediaUrl((book as any).owner.avatarUrl) }}
+                        style={{ width: "100%", height: "100%" }}
+                        contentFit="cover"
+                      />
+                    ) : (
+                      <Ionicons name="person" size={24} color={Colors.primary} />
+                    )}
+                  </View>
+                  <View className="flex-1">
+                    <View className="flex-row items-center gap-1">
+                      <Text className="text-sm font-bold text-text-primary flex-shrink" numberOfLines={2}>
+                        {(book as any).owner?.name || (book as any).sellerName || "বইবিক্রেতা"}
+                      </Text>
+                      <Ionicons name="chevron-forward" size={14} color={Colors.textMuted} />
+                    </View>
+                    <Text className="text-xs text-text-muted mt-0.5">
+                      {book.isVerifiedUser ? "যাচাইকৃত বিক্রেতা" : "বিক্রেতার প্রোফাইল"}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+                {!isOwner ? (
+                  <TouchableOpacity
+                    onPress={handleMessageOwner}
+                    disabled={creatingChat}
+                    className="flex-row items-center bg-primary px-3 py-2 rounded-xl"
+                  >
+                    <Ionicons name="chatbubble-ellipses-outline" size={15} color="#FFFFFF" />
+                    <Text className="text-xs font-bold text-white ml-1">মেসেজ</Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+              </View>
+            </View>
+          ) : null}
 
           {/* Location */}
           {book.location ? (
-            <View className="flex-row items-center gap-1.5 mb-4">
+            <View className="flex-row flex-wrap items-center gap-2 mb-4 px-4 py-3 rounded-2xl border border-border-light">
               <Ionicons name="location-outline" size={16} color={Colors.textSecondary} />
-              <Text className="text-sm text-text-secondary">{book.location}</Text>
+              <Text className="text-sm text-text-secondary">অবস্থান · {book.location}</Text>
               {book.distance ? (
                 <Text className="text-sm text-text-muted">({book.distance})</Text>
               ) : null}
@@ -621,70 +700,8 @@ function BookDetailContent() {
             </View>
           ) : null}
 
-          {/* PDF Preview */}
-          {Boolean(book.hasPreviewPdf || (book as any).preview_pdf_url || book.previewPdfUrl) ? (
-            <TouchableOpacity
-              className="flex-row items-center gap-3 bg-info/10 border border-info rounded-xl p-4 mb-5"
-              onPress={handleOpenPdfPreview}
-            >
-              <Ionicons name="document-text-outline" size={24} color={Colors.info} />
-              <View className="flex-1">
-                <Text className="text-sm font-semibold text-info">প্রিভিউ পড়ুন</Text>
-                <Text className="text-xs text-text-secondary">
-                  {book.previewPdfPages ? `${book.previewPdfPages} পৃষ্ঠা` : "বইয়ের নির্বাচিত অংশ"}
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color={Colors.info} />
-            </TouchableOpacity>
-          ) : null}
-
-          {/* Seller / Owner Info Card */}
-          {Boolean((book as any).owner || book.sellerId) ? (
-            <View className="mb-5">
-              <Text className="text-base font-bold text-secondary mb-3">বিক্রেতার তথ্য</Text>
-              <View className="p-4 rounded-2xl bg-surface-dark border border-border-light">
-              <View className="flex-row items-center justify-between">
-                <TouchableOpacity
-                  onPress={handleViewSellerProfile}
-                  activeOpacity={0.7}
-                  className="flex-row items-center flex-1 mr-2"
-                >
-                  <View className="w-12 h-12 rounded-full bg-primary/10 items-center justify-center mr-3 overflow-hidden border border-primary/20">
-                    {(book as any).owner?.avatarUrl ? (
-                      <Image
-                        source={{ uri: resolveMediaUrl((book as any).owner.avatarUrl) }}
-                        style={{ width: "100%", height: "100%" }}
-                        contentFit="cover"
-                      />
-                    ) : (
-                      <Ionicons name="person" size={24} color={Colors.primary} />
-                    )}
-                  </View>
-                  <View className="flex-1">
-                    <View className="flex-row items-center gap-1">
-                      <Text className="text-sm font-bold text-text-primary" numberOfLines={1}>
-                        {(book as any).owner?.name || (book as any).sellerName || "বইবিক্রেতা"}
-                      </Text>
-                      <Ionicons name="chevron-forward" size={14} color={Colors.textMuted} />
-                    </View>
-                    <Text className="text-xs text-text-muted mt-0.5">
-                      {(book as any).owner?.location || book.location || "বাংলাদেশ"}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-                {!isOwner ? (
-                  <TouchableOpacity
-                    onPress={handleMessageOwner}
-                    disabled={creatingChat}
-                    className="flex-row items-center bg-primary px-3 py-2 rounded-xl"
-                  >
-                    <Ionicons name="chatbubble-ellipses-outline" size={15} color="#FFFFFF" />
-                    <Text className="text-xs font-bold text-white ml-1">মেসেজ</Text>
-                  </TouchableOpacity>
-                ) : null}
-              </View>
-              </View>
-            </View>
+          {"recommended" in book && Array.isArray(book.recommended) && book.recommended.length > 0 ? (
+            <BookHorizontalList title="এ ধরনের আরও বই" books={book.recommended} />
           ) : null}
 
           {/* More from Seller */}
@@ -815,7 +832,7 @@ function BookDetailContent() {
             <Button label="সম্পাদনা করুন" onPress={() => router.push({ pathname: "/upload" as never, params: { bookId: book.id } })} variant="outline" leftIcon={<Ionicons name="pencil-outline" size={18} color={Colors.primary} />} />
           ) : (
             <View className="flex-row gap-2">
-              {canBuy ? <View className="flex-1"><Button label="Add to Cart" onPress={handleAddToCart} variant="outline" /></View> : null}
+              {canBuy ? <View className="flex-1"><Button label="Add to Cart" leftIcon={<Ionicons name="cart-outline" size={18} color={Colors.primary} />} onPress={handleAddToCart} variant="outline" /></View> : null}
               {canBuy ? <View className="flex-1"><Button label="এখনই কিনুন" onPress={handleBuyNow} /></View> : null}
               {!canBuy && canExchange ? <View className="flex-1"><Button label="বিনিময়ের প্রস্তাব" onPress={handleExchange} /></View> : null}
               {!canBuy && canBorrow ? <View className="flex-1"><Button label="ধার নিন" onPress={handleBorrow} variant={canExchange ? "outline" : "primary"} /></View> : null}
@@ -900,145 +917,56 @@ function BookDetailContent() {
       <Modal
         visible={showPdfModal}
         animationType="none"
-        transparent={false}
+        transparent
         onRequestClose={() => setShowPdfModal(false)}
       >
-        <View className="flex-1 bg-surface-dark" style={{ paddingTop: insets.top }}>
-          {/* Header */}
-          <View className="flex-row items-center justify-between px-4 py-3 bg-white border-b border-border-light shadow-sm">
-            <TouchableOpacity
-              onPress={() => setShowPdfModal(false)}
-              className="w-9 h-9 rounded-full bg-slate-100 items-center justify-center"
-            >
-              <Ionicons name="close" size={20} color={Colors.textPrimary} />
-            </TouchableOpacity>
-            <View className="flex-1 px-3">
-              <Text className="text-sm font-bold text-text-primary" numberOfLines={1}>
-                {book?.title} (পিডিএফ প্রিভিউ)
-              </Text>
-              <Text className="text-[11px] text-text-muted">
-                {book?.previewPdfPages ? `${book.previewPdfPages} পৃষ্ঠা` : "বইয়ের নির্বাচিত অংশ"}
-              </Text>
+        <View style={{ flex: 1, backgroundColor: "rgba(20, 31, 25, 0.68)", paddingTop: Math.max(insets.top, 12) }}>
+        <View style={{ flex: 1, backgroundColor: Colors.background, borderTopLeftRadius: 22, borderTopRightRadius: 22, overflow: "hidden" }}>
+          <View className="flex-row items-center px-4 py-2 bg-white border-b border-border-light">
+            <Ionicons name="book-outline" size={20} color={Colors.primary} />
+            <Text className="flex-1 text-sm font-bold text-text-primary ml-2" numberOfLines={1}>{book.title}</Text>
+            <View className="bg-primary/10 rounded-full px-3 py-1 mr-2">
+              <Text className="text-xs font-bold text-primary">প্রিভিউ</Text>
             </View>
-            <TouchableOpacity
-              onPress={() => {
-                const pdf = resolveMediaUrl(book?.previewPdfUrl || (book as any)?.preview_pdf_url);
-                if (Platform.OS === "web") {
-                  if (typeof window !== "undefined") window.open(pdf, "_blank");
-                } else {
-                  Linking.openURL(pdf);
-                }
-              }}
-              className="p-2"
-            >
-              <Ionicons name="open-outline" size={20} color={Colors.primary} />
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel="প্রিভিউ বন্ধ করুন"
+              onPress={() => setShowPdfModal(false)} className="w-10 h-10 rounded-xl border border-border-light bg-surface-dark items-center justify-center">
+              <Ionicons name="close" size={24} color={Colors.textPrimary} />
             </TouchableOpacity>
           </View>
-
-          {/* Viewer Container */}
           {Platform.OS === "web" ? (
-            <View style={{ flex: 1, backgroundColor: "#1e293b", overflow: "hidden" }}>
-              {/* Reader Switcher Toolbar */}
-              <View className="flex-row items-center justify-between px-3 py-2 bg-slate-900 border-b border-slate-800">
-                <View className="flex-row items-center gap-2">
-                  <TouchableOpacity
-                    onPress={() => setPdfViewerMode("google")}
-                    className={`px-3 py-1.5 rounded-lg flex-row items-center ${
-                      pdfViewerMode === "google" ? "bg-primary" : "bg-slate-800"
-                    }`}
-                  >
-                    <Ionicons
-                      name="layers-outline"
-                      size={13}
-                      color={pdfViewerMode === "google" ? "#FFFFFF" : "#94A3B8"}
-                    />
-                    <Text
-                      className={`text-xs ml-1.5 font-bold ${
-                        pdfViewerMode === "google" ? "text-white" : "text-slate-400"
-                      }`}
-                    >
-                      স্ক্রোল রিডার
-                    </Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    onPress={() => setPdfViewerMode("direct")}
-                    className={`px-3 py-1.5 rounded-lg flex-row items-center ${
-                      pdfViewerMode === "direct" ? "bg-primary" : "bg-slate-800"
-                    }`}
-                  >
-                    <Ionicons
-                      name="document-text-outline"
-                      size={13}
-                      color={pdfViewerMode === "direct" ? "#FFFFFF" : "#94A3B8"}
-                    />
-                    <Text
-                      className={`text-xs ml-1.5 font-bold ${
-                        pdfViewerMode === "direct" ? "text-white" : "text-slate-400"
-                      }`}
-                    >
-                      সরাসরি ভিউ
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-
-                <TouchableOpacity
-                  onPress={() => {
-                    const pdf = resolveMediaUrl(book?.previewPdfUrl || (book as any)?.preview_pdf_url);
-                    if (typeof window !== "undefined") window.open(pdf, "_blank");
-                  }}
-                  className="px-2.5 py-1 rounded bg-slate-800 flex-row items-center"
-                >
-                  <Ionicons name="expand-outline" size={13} color="#94A3B8" />
-                  <Text className="text-[11px] text-slate-300 ml-1">নতুন ট্যাবে</Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Iframe View */}
-              <View style={{ flex: 1, width: "100%", height: "100%" }}>
-                <iframe
-                  src={
-                    pdfViewerMode === "google"
-                      ? `https://docs.google.com/viewer?url=${encodeURIComponent(
-                          resolveMediaUrl(book?.previewPdfUrl || (book as any)?.preview_pdf_url)
-                        )}&embedded=true`
-                      : resolveMediaUrl(book?.previewPdfUrl || (book as any)?.preview_pdf_url)
-                  }
-                  style={
-                    {
-                      width: "100%",
-                      height: "100%",
-                      border: "none",
-                      overflow: "auto",
-                      WebkitOverflowScrolling: "touch",
-                    } as any
-                  }
-                  title="Book PDF Preview"
-                />
-              </View>
-            </View>
+            <iframe title="Book PDF Preview" srcDoc={pdfReaderHtml(previewUrl)}
+              style={{ flex: 1, width: "100%", border: 0 }} />
           ) : (
-            <View className="flex-1 items-center justify-center p-6 bg-white">
-              <View className="w-16 h-16 rounded-2xl bg-primary/10 items-center justify-center mb-4">
-                <Ionicons name="document-text" size={36} color={Colors.primary} />
-              </View>
-              <Text className="text-base font-bold text-text-primary text-center">
-                পিডিএফ প্রিভিউ রিডার
-              </Text>
-              <Text className="text-xs text-text-muted text-center mt-1 mb-6 max-w-xs">
-                ডিভাইসের বিল্ট-ইন রিডারে সম্পূর্ণ প্রিভিউটি পড়তে নিচের বাটনে চাপ দিন।
-              </Text>
-              <Button
-                label="রিডারে প্রিভিউ খুলুন"
-                onPress={() => {
-                  const pdf = resolveMediaUrl(book?.previewPdfUrl || (book as any)?.preview_pdf_url);
-                  WebBrowser.openBrowserAsync(pdf);
-                }}
-                leftIcon={<Ionicons name="book-outline" size={18} color="#FFF" />}
-                fullWidth={false}
-              />
-            </View>
+            <WebView
+              key={`${previewUrl}-${pdfRetry}`}
+              originWhitelist={["*"]}
+              source={{ html: pdfReaderHtml(previewUrl), baseUrl: "https://cdnjs.cloudflare.com/" }}
+              style={{ flex: 1, backgroundColor: Colors.background }}
+              startInLoadingState
+              renderLoading={() => (
+                <View className="absolute inset-0 items-center justify-center bg-surface-dark">
+                  <ActivityIndicator size="large" color={Colors.primary} />
+                  <Text className="text-sm text-text-secondary mt-3">প্রিভিউ লোড হচ্ছে...</Text>
+                </View>
+              )}
+              renderError={() => (
+                <View className="flex-1 items-center justify-center p-6 bg-surface-dark">
+                  <Text className="text-base font-semibold text-text-primary text-center mb-4">প্রিভিউ লোড হয়নি</Text>
+                  <Button label="আবার চেষ্টা করুন" onPress={() => setPdfRetry((count) => count + 1)} fullWidth={false} />
+                </View>
+              )}
+            />
           )}
+          <View style={{ paddingBottom: Math.max(insets.bottom, 12) }} className="bg-white border-t border-border-light px-4 pt-3 flex-row items-center gap-3">
+            <Text className="flex-1 text-xs text-text-secondary">স্ক্রল করে পৃষ্ঠাগুলো পড়ুন</Text>
+            {canBuy && !isOwner ? (
+              <TouchableOpacity accessibilityRole="button" onPress={() => { setShowPdfModal(false); handleBuyNow(); }}
+                className="bg-primary rounded-lg px-4 py-3 items-center justify-center">
+                <Text className="text-sm font-bold text-white">বইটি কিনুন {Number(book.price) > 0 ? `(৳${Number(book.price)})` : ""}</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+        </View>
         </View>
       </Modal>
 

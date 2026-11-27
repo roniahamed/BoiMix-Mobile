@@ -1,0 +1,1 @@
+SVG icons and header wave are recreated approximations, not original source vectors. PNGs are crops from the supplied mockup, with backgrounds and possible UI overlays. Book covers and seller image are demo artwork, not verified commercial assets. Colors are approximate. SVG icons can be recolored by changing stroke. No original logo source was supplied.
