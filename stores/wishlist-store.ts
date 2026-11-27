@@ -4,6 +4,9 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type WishlistState = {
   bookIds: Set<string>;
+  scopeId: string | null;
+  syncPending: boolean;
+  syncError: boolean;
 
   addBook: (bookId: string) => void;
   removeBook: (bookId: string) => void;
@@ -16,6 +19,9 @@ export const useWishlistStore = create<WishlistState>()(
   persist(
     (set, get) => ({
       bookIds: new Set<string>(),
+      scopeId: null,
+      syncPending: false,
+      syncError: false,
 
       addBook: (bookId) =>
         set((state) => ({ bookIds: new Set([...state.bookIds, bookId]) })),
@@ -40,10 +46,11 @@ export const useWishlistStore = create<WishlistState>()(
       name: "wishlist-store",
       storage: createJSONStorage(() => AsyncStorage),
       // Serialize Set to Array for JSON storage
-      partialize: (state) => ({ bookIds: [...state.bookIds] }),
+      partialize: (state) => ({ bookIds: [...state.bookIds], scopeId: state.scopeId }),
       merge: (persisted, current) => ({
         ...current,
         bookIds: new Set((persisted as { bookIds: string[] }).bookIds ?? []),
+        scopeId: (persisted as { scopeId?: string | null }).scopeId ?? null,
       }),
     },
   ),

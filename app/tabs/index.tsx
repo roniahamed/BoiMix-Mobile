@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useMemo, useRef, useState } from "react";
 import { FlashList, type FlashListRef } from "@shopify/flash-list";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Location from "expo-location";
@@ -26,6 +26,7 @@ import { queryKeys } from "@/lib/api/query-keys";
 import { Colors } from "@/constants/theme";
 import { useBookFeedWarmup } from "@/hooks/useBookFeedWarmup";
 import { useCartStore } from "@/stores/cart-store";
+import { useAuthStore } from "@/stores/auth-store";
 
 const MOCK_BANNERS = [
   {
@@ -48,6 +49,31 @@ const MOCK_BANNERS = [
   },
 ];
 
+const HomeHeader = memo(function HomeHeader({ onMenuPress }: { onMenuPress: () => void }) {
+  const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const userId = useAuthStore((state) => state.user?.id ?? null);
+  const cartCount = useCartStore((state) => state.scopeId === userId ? state.items.reduce((sum, item) => sum + item.quantity, 0) : 0);
+  return (
+    <View style={{ paddingTop: insets.top + 8 }} className="flex-row items-center px-4 pb-3 bg-surface-dark">
+        <TouchableOpacity onPress={onMenuPress} accessibilityRole="button" accessibilityLabel="মেনু খুলুন" className="w-11 h-11 items-center justify-center">
+          <Ionicons name="menu-outline" size={29} color={Colors.secondary} />
+        </TouchableOpacity>
+        <View className="flex-1 ml-1"><Image source={require("@/assets/images/boimix-logo.png")} style={{ width: "100%", maxWidth: 125, height: 42 }} contentFit="contain" contentPosition="left" accessibilityLabel="BoiMix" /></View>
+        <TouchableOpacity onPress={() => router.push("/search" as never)} accessibilityRole="button" accessibilityLabel="বই খুঁজুন" className="w-11 h-11 items-center justify-center"><Ionicons name="search-outline" size={24} color={Colors.secondary} /></TouchableOpacity>
+        <TouchableOpacity onPress={() => router.push("/wishlist" as never)} accessibilityRole="button" accessibilityLabel="পছন্দের বই" className="w-11 h-11 items-center justify-center">
+          <Ionicons name="heart-outline" size={24} color={Colors.secondary} />
+        </TouchableOpacity>
+        <View>
+          <TouchableOpacity onPress={() => router.push("/cart" as never)} accessibilityRole="button" accessibilityLabel="কার্ট" className="w-11 h-11 items-center justify-center">
+            <Ionicons name="cart-outline" size={24} color={Colors.secondary} />
+          </TouchableOpacity>
+          {cartCount > 0 && <View className="absolute top-0 right-0 bg-error min-w-[18px] h-[18px] rounded-full items-center justify-center px-1"><Text className="text-[10px] font-bold text-white">{cartCount > 9 ? "9+" : cartCount}</Text></View>}
+        </View>
+      </View>
+  );
+});
+
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -60,7 +86,7 @@ export default function HomeScreen() {
   const [locationDenied, setLocationDenied] = useState(false);
   const [locating, setLocating] = useState(false);
 
-  const cartCount = useCartStore((s) => s.items.reduce((sum, i) => sum + i.quantity, 0));
+  const openMenu = useCallback(() => setMenuOpen(true), []);
 
   const { data: trendingData, isLoading: trendingLoading, isError: trendingError, refetch: refetchTrending } = useQuery({
     queryKey: queryKeys.books.trending(),
@@ -124,7 +150,7 @@ export default function HomeScreen() {
 
   return (
     <View className="flex-1 bg-surface-dark">
-      <Modal visible={menuOpen} transparent animationType="fade" onRequestClose={() => setMenuOpen(false)}>
+      <Modal visible={menuOpen} transparent animationType="none" onRequestClose={() => setMenuOpen(false)}>
         <View className="flex-1 bg-black/40 justify-end">
           <TouchableOpacity className="flex-1" activeOpacity={1} onPress={() => setMenuOpen(false)} accessibilityLabel="মেনু বন্ধ করুন" />
           <View className="bg-white rounded-t-3xl p-5" style={{ paddingBottom: insets.bottom + 20 }}>
@@ -133,23 +159,7 @@ export default function HomeScreen() {
           </View>
         </View>
       </Modal>
-      {/* Header */}
-      <View style={{ paddingTop: insets.top + 8 }} className="flex-row items-center px-4 pb-3 bg-surface-dark">
-        <TouchableOpacity onPress={() => setMenuOpen(true)} accessibilityRole="button" accessibilityLabel="মেনু খুলুন" className="w-11 h-11 items-center justify-center">
-          <Ionicons name="menu-outline" size={29} color={Colors.secondary} />
-        </TouchableOpacity>
-        <View className="flex-1 ml-1"><Image source={require("@/assets/images/boimix-logo.png")} style={{ width: "100%", maxWidth: 125, height: 42 }} contentFit="contain" contentPosition="left" accessibilityLabel="BoiMix" /></View>
-        <TouchableOpacity onPress={() => router.push("/search" as never)} accessibilityRole="button" accessibilityLabel="বই খুঁজুন" className="w-11 h-11 items-center justify-center"><Ionicons name="search-outline" size={24} color={Colors.secondary} /></TouchableOpacity>
-        <TouchableOpacity onPress={() => router.push("/wishlist" as never)} accessibilityRole="button" accessibilityLabel="পছন্দের বই" className="w-11 h-11 items-center justify-center">
-          <Ionicons name="heart-outline" size={24} color={Colors.secondary} />
-        </TouchableOpacity>
-        <View>
-          <TouchableOpacity onPress={() => router.push("/cart" as never)} accessibilityRole="button" accessibilityLabel="কার্ট" className="w-11 h-11 items-center justify-center">
-            <Ionicons name="cart-outline" size={24} color={Colors.secondary} />
-          </TouchableOpacity>
-          {cartCount > 0 && <View className="absolute top-0 right-0 bg-error min-w-[18px] h-[18px] rounded-full items-center justify-center px-1"><Text className="text-[10px] font-bold text-white">{cartCount > 9 ? "9+" : cartCount}</Text></View>}
-        </View>
-      </View>
+      <HomeHeader onMenuPress={openMenu} />
 
       <FlashList
         ref={listRef}

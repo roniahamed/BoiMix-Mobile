@@ -366,7 +366,7 @@ export default function ProfileScreen() {
       <Modal
         visible={showLogoutModal}
         transparent
-        animationType="fade"
+        animationType="none"
         onRequestClose={() => setShowLogoutModal(false)}
       >
         <View className="flex-1 bg-black/50 justify-center items-center p-5">

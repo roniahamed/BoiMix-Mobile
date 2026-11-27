@@ -70,5 +70,5 @@ function FilterContents({ onClose, onApply }: Omit<Props, "visible">) {
 }
 
 export function FilterBottomSheet({ visible, onClose, onApply }: Props) {
-  return <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}><View className="flex-1 bg-black/40">{visible && <FilterContents onClose={onClose} onApply={onApply} />}</View></Modal>;
+  return <Modal visible={visible} animationType="none" transparent onRequestClose={onClose}><View className="flex-1 bg-black/40">{visible && <FilterContents onClose={onClose} onApply={onApply} />}</View></Modal>;
 }

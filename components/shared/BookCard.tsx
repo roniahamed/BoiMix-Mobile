@@ -138,7 +138,7 @@ function BookCardBase({
   onWishlistToggle,
 }: BookCardProps) {
   const router = useRouter();
-  const { width } = useWindowDimensions();
+  const { width, fontScale } = useWindowDimensions();
   const gridCardWidth = (width - 48) / 2;
   const shelfCardWidth = Math.max(120, (width - 32 - 8 * 2.2) / 2.2);
   const isOutOfStock = book.isOutOfStock || book.availability === "out-of-stock";
@@ -164,7 +164,7 @@ function BookCardBase({
       <TouchableOpacity
         onPress={handlePress}
         activeOpacity={0.85}
-        style={{ width: shelfCardWidth }}
+        style={{ width: shelfCardWidth, minHeight: shelfCardWidth * 1.12 + 160 * Math.max(1, fontScale), flexGrow: 1 }}
         className="mr-2 bg-white rounded-xl p-1.5 border border-border-light"
       >
         <View className="relative mb-2">
@@ -219,13 +219,15 @@ function BookCardBase({
         <Text className="text-xs text-text-secondary mt-0.5" numberOfLines={1}>
           {book.author}
         </Text>
-        <View className="flex-row items-center justify-between mt-2">
-          <View className="flex-1"><PriceTag book={book} />
-            {!!book.location && <View className="flex-row items-center mt-1"><Ionicons name="location-outline" size={12} color={Colors.textSecondary} /><Text className="text-xs text-text-secondary ml-1 flex-1" numberOfLines={1}>{book.location}</Text></View>}
+        <View className="mt-auto pt-2">
+          <PriceTag book={book} />
+          <View style={{ minHeight: 20 * Math.max(1, fontScale) }} className="flex-row items-center mt-1">
+            {!!book.location && <><Ionicons name="location-outline" size={12} color={Colors.textSecondary} /><Text className="text-xs text-text-secondary ml-1 flex-1" numberOfLines={1}>{book.location}</Text></>}
           </View>
-
         </View>
-        <AddToCartButton book={book} />
+        <View style={{ minHeight: 52 * Math.max(1, fontScale) }} className="justify-end">
+          <AddToCartButton book={book} />
+        </View>
       </TouchableOpacity>
     );
   }

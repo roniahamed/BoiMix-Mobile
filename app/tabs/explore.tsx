@@ -14,6 +14,7 @@ import { booksApi } from "@/lib/api/books";
 import { queryKeys } from "@/lib/api/query-keys";
 import { resolveMediaUrl } from "@/lib/utils/media";
 import { useCartStore } from "@/stores/cart-store";
+import { useAuthStore } from "@/stores/auth-store";
 import type { BookCardBook, BookCategory } from "@/types/book";
 
 function categoryName(category: BookCategory) {
@@ -24,7 +25,8 @@ export default function CategoriesScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const [selected, setSelected] = useState<string | null>(null);
-  const cartCount = useCartStore((state) => state.items.reduce((sum, item) => sum + item.quantity, 0));
+  const userId = useAuthStore((state) => state.user?.id ?? null);
+  const cartCount = useCartStore((state) => state.scopeId === userId ? state.items.reduce((sum, item) => sum + item.quantity, 0) : 0);
 
   const categories = useQuery({
     queryKey: queryKeys.books.categories(),

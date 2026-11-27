@@ -14,7 +14,7 @@ import {
 import * as WebBrowser from "expo-web-browser";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -30,9 +30,10 @@ import { useWishlistStore } from "@/stores/wishlist-store";
 import { BOOK_CONDITION_LABELS, type BookCardBook } from "@/types/book";
 import { Colors } from "@/constants/theme";
 import { resolveMediaUrl } from "@/lib/utils/media";
-import { wishlistApi } from "@/lib/api/wishlist";
+import { toggleWishlist } from "@/lib/wishlist-sync";
 import { reviewsApi, type BookReviewItem } from "@/lib/api/reviews";
 import { shareContent } from "@/lib/utils/share";
+import { isCartReadyForCurrentAccount } from "@/lib/cart-ready";
 
 export default function BookDetailScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
@@ -43,12 +44,12 @@ function BookDetailContent() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const queryClient = useQueryClient();
 
   const user = useAuthStore((s) => s.user);
   const addToCart = useCartStore((s) => s.addItem);
   const showCartConfirmation = useCartConfirmationStore((s) => s.show);
-  const { isWishlisted, toggleBook } = useWishlistStore();
+  const bookIds = useWishlistStore((state) => state.bookIds);
+  const wishlistScopeId = useWishlistStore((state) => state.scopeId);
 
   // ── Images & Gallery state ──
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -167,34 +168,18 @@ function BookDetailContent() {
   });
 
   // ── Wishlist mutation ─────────────────────────────────────────────────────
-  const wishlistMutation = useMutation({
-    mutationFn: async (_isCurrentlyWishlisted?: boolean) => {
-      await wishlistApi.toggleWishlist(book!.id);
-    },
-    onMutate: () => {
-      toggleBook(book!.id);
-    },
-    onError: () => {
-      toggleBook(book!.id);
-      Alert.alert("ব্যর্থ", "উইশলিস্ট আপডেট করা যায়নি।");
-    },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: queryKeys.me.wishlist() }),
-  });
-
   const handleWishlist = () => {
-    if (!book || wishlistMutation.isPending) return;
-    if (!user) { toggleBook(book.id); return; }
-    wishlistMutation.mutate(wishlisted);
+    if (book) toggleWishlist(book.id);
   };
 
   const handleAddToCart = () => {
-    if (!book) return;
-    addToCart(book);
+    if (!book || !isCartReadyForCurrentAccount()) return;
     showCartConfirmation(book.title);
+    addToCart(book);
   };
 
   const handleBuyNow = () => {
-    if (!book) return;
+    if (!book || !isCartReadyForCurrentAccount()) return;
     addToCart(book);
     router.push("/cart" as never);
   };
@@ -305,7 +290,7 @@ function BookDetailContent() {
     });
   };
 
-  const wishlisted = book ? isWishlisted(book.id) : false;
+  const wishlisted = book ? wishlistScopeId === (user?.id ?? null) && bookIds.has(book.id) : false;
   const isOwner = Boolean(user?.id && (user.id === book?.ownerId || user.id === book?.sellerId));
   const conditionLabel = BOOK_CONDITION_LABELS.find((c) => c.value === book?.condition);
   const isOutOfStock = Boolean(book?.isOutOfStock || book?.availability === "out-of-stock");
@@ -843,7 +828,7 @@ function BookDetailContent() {
       <Modal
         visible={showReviewModal}
         transparent
-        animationType="fade"
+        animationType="none"
         onRequestClose={() => setShowReviewModal(false)}
       >
         <View className="flex-1 bg-black/50 justify-center items-center p-5">
@@ -914,7 +899,7 @@ function BookDetailContent() {
       {/* PDF Preview Modal */}
       <Modal
         visible={showPdfModal}
-        animationType="slide"
+        animationType="none"
         transparent={false}
         onRequestClose={() => setShowPdfModal(false)}
       >
@@ -1061,7 +1046,7 @@ function BookDetailContent() {
       <Modal
         visible={!!fullScreenImage}
         transparent={true}
-        animationType="fade"
+        animationType="none"
         onRequestClose={() => setFullScreenImage(null)}
       >
         <View className="flex-1 bg-black items-center justify-center relative">

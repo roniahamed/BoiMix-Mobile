@@ -1,24 +1,19 @@
 import apiClient from "@/lib/api/client";
 import { API_ENDPOINTS } from "@/constants/api";
+import type { BookCardBook } from "@/types/book";
 
-export type CartItemResponse = {
-  id: string;
-  listingId: string;
+export type CartItemResponse = BookCardBook & {
+  item_id: string;
+  listing_id: string;
   quantity: number;
-  price: number;
-  book?: {
-    id: string;
-    title: string;
-    author: string;
-    coverUrl?: string;
-  };
+  selected: boolean;
 };
 
 export type CartResponse = {
   id: string;
   items: CartItemResponse[];
   subtotal: number;
-  total: number;
+  total_items: number;
 };
 
 export const cartApi = {
@@ -31,9 +26,11 @@ export const cartApi = {
       quantity,
     }),
 
-  updateQuantity: (itemId: string, quantity: number) =>
-    apiClient.patch(API_ENDPOINTS.ME.CART_ITEM(itemId), { quantity }),
+  updateItem: (itemId: string, changes: { quantity?: number; selected?: boolean }) =>
+    apiClient.patch(API_ENDPOINTS.ME.CART_ITEM(itemId), changes),
 
   removeItem: (itemId: string) =>
     apiClient.delete(API_ENDPOINTS.ME.CART_ITEM(itemId)),
+
+  clearCart: () => apiClient.delete(API_ENDPOINTS.ME.CART),
 };

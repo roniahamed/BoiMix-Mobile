@@ -1,10 +1,8 @@
-import { useCallback } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { memo, useCallback } from "react";
 import { useWishlistStore } from "@/stores/wishlist-store";
 import { useAuthStore } from "@/stores/auth-store";
-import { wishlistApi } from "@/lib/api/wishlist";
-import { queryKeys } from "@/lib/api/query-keys";
-import { Alert, View, FlatList, Platform, ScrollView, Text, TouchableOpacity } from "react-native";
+import { toggleWishlist } from "@/lib/wishlist-sync";
+import { View, FlatList, Platform, ScrollView, Text, TouchableOpacity } from "react-native";
 import { BookCard, BookCardSkeleton } from "@/components/shared/BookCard";
 import { SectionHeader } from "@/components/home/SectionHeader";
 import type { BookCardBook } from "@/types/book";
@@ -18,7 +16,7 @@ type Props = {
   seeAllRoute?: string;
 };
 
-export function BookHorizontalList({
+export const BookHorizontalList = memo(function BookHorizontalList({
   title,
   books,
   loading,
@@ -26,25 +24,13 @@ export function BookHorizontalList({
   onRetry,
   seeAllRoute,
 }: Props) {
-  const queryClient = useQueryClient();
   const bookIds = useWishlistStore((state) => state.bookIds);
-  const toggleBook = useWishlistStore((state) => state.toggleBook);
-  const user = useAuthStore((state) => state.user);
-  const handleWishlist = useCallback(async (id: string) => {
-    toggleBook(id);
-    if (user) {
-      try {
-        await wishlistApi.toggleWishlist(id);
-      } catch {
-        toggleBook(id);
-        Alert.alert("পছন্দের তালিকা", "পরিবর্তন সংরক্ষণ করা যায়নি। আবার চেষ্টা করুন।");
-      }
-    }
-    queryClient.invalidateQueries({ queryKey: queryKeys.me.wishlist() });
-  }, [toggleBook, user, queryClient]);
+  const scopeId = useWishlistStore((state) => state.scopeId);
+  const userId = useAuthStore((state) => state.user?.id ?? null);
+  const handleWishlist = useCallback((id: string) => toggleWishlist(id), []);
   const renderBookItem = useCallback(
-    ({ item }: { item: BookCardBook }) => <BookCard book={{ ...item, isWishlisted: bookIds.has(item.id) }} variant="horizontal" onWishlistToggle={handleWishlist} />,
-    [bookIds, handleWishlist]
+    ({ item }: { item: BookCardBook }) => <BookCard book={{ ...item, isWishlisted: scopeId === userId && bookIds.has(item.id) }} variant="horizontal" onWishlistToggle={handleWishlist} />,
+    [bookIds, scopeId, userId, handleWishlist]
   );
 
   if (error) {
@@ -90,7 +76,7 @@ export function BookHorizontalList({
       <SectionHeader title={title} seeAllRoute={seeAllRoute} />
       {Platform.OS === "web" ? (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16 }}>
-          {books.map((item) => <BookCard key={item.id} book={{ ...item, isWishlisted: bookIds.has(item.id) }} variant="horizontal" onWishlistToggle={handleWishlist} />)}
+          {books.map((item) => <BookCard key={item.id} book={{ ...item, isWishlisted: scopeId === userId && bookIds.has(item.id) }} variant="horizontal" onWishlistToggle={handleWishlist} />)}
         </ScrollView>
       ) : <FlatList
         data={books}
@@ -105,4 +91,4 @@ export function BookHorizontalList({
       />}
     </View>
   );
-}
+});

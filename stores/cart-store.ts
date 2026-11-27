@@ -2,8 +2,9 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { BookCardBook } from "@/types/book";
+import { emitCartChange } from "@/lib/cart-sync-events";
 
-type CartItem = {
+export type CartItem = {
   book: BookCardBook;
   quantity: number;
   selected: boolean;
@@ -13,6 +14,9 @@ type CartState = {
   items: CartItem[];
   couponCode: string | null;
   couponDiscount: number;
+  scopeId: string | null;
+  syncPending: boolean;
+  syncError: boolean;
 
   // Actions
   addItem: (book: BookCardBook, quantity?: number) => void;
@@ -38,6 +42,9 @@ export const useCartStore = create<CartState>()(
       items: [],
       couponCode: null,
       couponDiscount: 0,
+      scopeId: null,
+      syncPending: false,
+      syncError: false,
 
       addItem: (book, quantity = 1) => {
         set((state) => {
@@ -55,12 +62,15 @@ export const useCartStore = create<CartState>()(
             items: [...state.items, { book, quantity, selected: true }],
           };
         });
+        emitCartChange({ type: "add", id: book.id, quantity });
       },
 
-      removeItem: (bookId) =>
+      removeItem: (bookId) => {
         set((state) => ({
           items: state.items.filter((i) => i.book.id !== bookId),
-        })),
+        }));
+        emitCartChange({ type: "remove", id: bookId });
+      },
 
       updateQuantity: (bookId, quantity) => {
         if (quantity <= 0) {
@@ -72,26 +82,34 @@ export const useCartStore = create<CartState>()(
             i.book.id === bookId ? { ...i, quantity } : i,
           ),
         }));
+        emitCartChange({ type: "update", id: bookId, quantity });
       },
 
-      toggleSelect: (bookId) =>
+      toggleSelect: (bookId) => {
         set((state) => ({
           items: state.items.map((i) =>
             i.book.id === bookId ? { ...i, selected: !i.selected } : i,
           ),
-        })),
+        }));
+        const item = get().items.find((i) => i.book.id === bookId);
+        if (item) emitCartChange({ type: "update", id: bookId, selected: item.selected });
+      },
 
-      selectAll: () =>
+      selectAll: () => {
         set((state) => ({
           items: state.items.map((i) => ({ ...i, selected: true })),
-        })),
+        }));
+        get().items.forEach((item) => emitCartChange({ type: "update", id: item.book.id, selected: true }));
+      },
 
-      clearSelected: () =>
+      clearSelected: () => {
         set((state) => ({
           items: state.items.map((i) => ({ ...i, selected: false })),
-        })),
+        }));
+        get().items.forEach((item) => emitCartChange({ type: "update", id: item.book.id, selected: false }));
+      },
 
-      clearCart: () => set({ items: [], couponCode: null, couponDiscount: 0 }),
+      clearCart: () => { set({ items: [], couponCode: null, couponDiscount: 0 }); emitCartChange({ type: "clear" }); },
 
       applyCoupon: (code, discount) =>
         set({ couponCode: code, couponDiscount: discount }),
@@ -116,6 +134,7 @@ export const useCartStore = create<CartState>()(
     {
       name: "cart-store",
       storage: createJSONStorage(() => AsyncStorage),
+      partialize: (state) => ({ items: state.items, couponCode: state.couponCode, couponDiscount: state.couponDiscount, scopeId: state.scopeId }),
     },
   ),
 );

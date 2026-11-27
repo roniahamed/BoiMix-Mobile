@@ -133,7 +133,7 @@ export const ordersApi = {
         paymentMethod: payload.payment_method === "cod" ? "cod" : "eps",
         platform: Platform.OS,
         transaction_type_id: Platform.OS === "android" ? 2 : Platform.OS === "ios" ? 3 : 1,
-        items: payload.items || [],
+        items: (payload.items || []).map((item) => ({ listing_id: item.id, quantity: item.quantity })),
         selected_courier: "pathao",
         delivery_option: payload.delivery_method === "home" ? "courier" : "pickup",
         voucher_code: payload.coupon_code || "",

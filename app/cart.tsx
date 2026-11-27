@@ -5,6 +5,7 @@ import {
   TextInput,
   ScrollView,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -17,12 +18,15 @@ import { useCartStore } from "@/stores/cart-store";
 import { ordersApi } from "@/lib/api/orders";
 import { Colors } from "@/constants/theme";
 import { resolveMediaUrl } from "@/lib/utils/media";
+import { emitCartChange } from "@/lib/cart-sync-events";
+import { useAuthStore } from "@/stores/auth-store";
 
 const ESTIMATED_DELIVERY_FEE = 60; // 60 BDT standard delivery
 
 export default function CartScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const userId = useAuthStore((state) => state.user?.id ?? null);
   const [couponInput, setCouponInput] = useState("");
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponError, setCouponError] = useState("");
@@ -36,6 +40,9 @@ export default function CartScreen() {
     clearSelected,
     couponCode,
     couponDiscount,
+    syncPending,
+    syncError,
+    scopeId,
     applyCoupon,
     removeCoupon,
     getSelectedItems,
@@ -64,20 +71,17 @@ export default function CartScreen() {
         setCouponError(response.data.message || "কুপনটি সঠিক নয়");
       }
     } catch {
-      // Demo / offline fallback: if test coupon "BOIMIX50"
-      if (couponInput.trim().toUpperCase() === "BOIMIX50") {
-        applyCoupon("BOIMIX50", 50);
-        setCouponInput("");
-        Alert.alert("সফল", "কুপন সফলভাবে প্রয়োগ করা হয়েছে! ৳50 ছাড়।");
-      } else {
-        setCouponError("কুপনটি সঠিক নয় বা মেয়াদ শেষ");
-      }
+      setCouponError("কুপন যাচাই করা যায়নি। সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।");
     } finally {
       setCouponLoading(false);
     }
   };
 
   const handleProceedCheckout = () => {
+    if (syncPending || syncError) {
+      Alert.alert("কার্ট সিঙ্ক হচ্ছে", "কার্ট সার্ভারের সঙ্গে সিঙ্ক হলে আবার চেষ্টা করুন। সিঙ্ক না হলে ইন্টারনেট সংযোগ পরীক্ষা করুন।");
+      return;
+    }
     if (selectedItems.length === 0) {
       Alert.alert("নির্বাচন করুন", "অনুগ্রহ করে চেকআউট করার জন্য অন্তত একটি বই নির্বাচন করুন।");
       return;
@@ -92,6 +96,10 @@ export default function CartScreen() {
     if (!sellerGroups[seller]) sellerGroups[seller] = [];
     sellerGroups[seller].push(item);
   });
+
+  if (scopeId !== userId) {
+    return <View className="flex-1 items-center justify-center bg-surface-dark"><ActivityIndicator color={Colors.primary} /><Text className="text-sm text-text-secondary mt-2">কার্ট লোড হচ্ছে...</Text></View>;
+  }
 
   return (
     <View className="flex-1 bg-surface-dark">
@@ -124,8 +132,12 @@ export default function CartScreen() {
         )}
       </View>
 
+      {syncPending || syncError ? <View className="px-4 py-2 bg-primary/10 flex-row justify-between"><Text className="text-xs text-primary">{syncError ? "কার্ট সার্ভারের সঙ্গে সিঙ্ক করা যায়নি" : "কার্ট সিঙ্ক হচ্ছে..."}</Text>{syncError && !syncPending ? <TouchableOpacity onPress={() => emitCartChange({ type: "refresh" })}><Text className="text-xs font-bold text-primary">আবার চেষ্টা করুন</Text></TouchableOpacity> : null}</View> : null}
+
       {/* Empty State */}
-      {items.length === 0 ? (
+      {items.length === 0 && syncPending ? (
+        <View className="flex-1 items-center justify-center"><ActivityIndicator color={Colors.primary} /><Text className="text-sm text-text-secondary mt-2">কার্ট লোড হচ্ছে...</Text></View>
+      ) : items.length === 0 ? (
         <View className="flex-1 items-center justify-center px-6">
           <View className="w-20 h-20 rounded-full bg-surface-card border border-border items-center justify-center mb-4">
             <Ionicons name="cart-outline" size={38} color={Colors.textMuted} />
@@ -170,6 +182,9 @@ export default function CartScreen() {
                   {/* Select Checkbox */}
                   <TouchableOpacity
                     onPress={() => toggleSelect(book.id)}
+                    accessibilityRole="checkbox"
+                    accessibilityLabel={`${book.title} নির্বাচন`}
+                    accessibilityState={{ checked: selected }}
                     className="mr-3"
                   >
                     <Ionicons
@@ -215,6 +230,8 @@ export default function CartScreen() {
                       <View className="flex-row items-center bg-surface-dark border border-border rounded-lg">
                         <TouchableOpacity
                           onPress={() => updateQuantity(book.id, quantity - 1)}
+                          accessibilityRole="button"
+                          accessibilityLabel={`${book.title} এর সংখ্যা কমান`}
                           className="w-7 h-7 items-center justify-center"
                         >
                           <Ionicons name="remove" size={14} color={Colors.textPrimary} />
@@ -224,6 +241,8 @@ export default function CartScreen() {
                         </Text>
                         <TouchableOpacity
                           onPress={() => updateQuantity(book.id, quantity + 1)}
+                          accessibilityRole="button"
+                          accessibilityLabel={`${book.title} এর সংখ্যা বাড়ান`}
                           className="w-7 h-7 items-center justify-center"
                         >
                           <Ionicons name="add" size={14} color={Colors.textPrimary} />
@@ -235,6 +254,8 @@ export default function CartScreen() {
                   {/* Remove Item */}
                   <TouchableOpacity
                     onPress={() => removeItem(book.id)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${book.title} কার্ট থেকে সরান`}
                     className="ml-2 p-1 self-start"
                   >
                     <Ionicons name="close" size={18} color={Colors.textMuted} />

@@ -67,7 +67,10 @@ export default function CheckoutScreen() {
     getSubtotal,
     couponCode,
     couponDiscount,
-    clearCart,
+    removeItem,
+    syncPending,
+    syncError,
+    scopeId,
   } = useCartStore();
 
   const selectedItems = getSelectedItems();
@@ -111,6 +114,10 @@ export default function CheckoutScreen() {
   };
 
   const handlePlaceOrder = async () => {
+    if (syncPending || syncError || scopeId !== (user?.id ?? null)) {
+      Alert.alert("কার্ট সিঙ্ক হয়নি", "কার্ট পেজে ফিরে সিঙ্ক সম্পন্ন করে আবার চেষ্টা করুন।");
+      return;
+    }
     if (!isConnected) {
       Alert.alert(
         "ইন্টারনেট সংযোগ নেই",
@@ -137,8 +144,8 @@ export default function CheckoutScreen() {
         coupon_code: couponCode,
       });
 
-      // Clear cart
-      clearCart();
+      // Remove only the purchased items, leaving unselected books in the cart.
+      selectedItems.forEach((item) => removeItem(item.book.id));
 
       // Handle EPS Payment Gateway redirect
       if (paymentMethod === "eps") {
@@ -220,23 +227,7 @@ export default function CheckoutScreen() {
         );
       }
     } catch {
-      // Offline / Demo fallback
-      clearCart();
-      if (Platform.OS === "web") {
-        alert("আপনার অর্ডারটি সফলভাবে নিশ্চিত করা হয়েছে!");
-        router.replace("/tabs/orders" as never);
-      } else {
-        Alert.alert(
-          "অর্ডার সফল হয়েছে!",
-          "আপনার অর্ডারটি নিশ্চিত করা হয়েছে।",
-          [
-            {
-              text: "অর্ডার দেখুন",
-              onPress: () => router.replace("/tabs/orders" as never),
-            },
-          ],
-        );
-      }
+      Alert.alert("অর্ডার সম্পন্ন হয়নি", "অর্ডারটি নিশ্চিত করা যায়নি। কার্টে ফিরে সংযোগ ও তথ্য যাচাই করে আবার চেষ্টা করুন।");
     } finally {
       setSubmitting(false);
     }

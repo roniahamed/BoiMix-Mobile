@@ -1,5 +1,7 @@
+import { Platform } from "react-native";
+
 const getApiBaseUrl = (): string => {
-  if (typeof window !== "undefined" && window.location?.hostname) {
+  if (Platform.OS === "web" && typeof window !== "undefined" && window.location?.hostname) {
     const host = window.location.hostname;
     if (host === "localhost" || host === "127.0.0.1") {
       return `http://${host}:8080/api/v1`;
@@ -12,7 +14,7 @@ const getApiBaseUrl = (): string => {
 };
 
 const getWsBaseUrl = (): string => {
-  if (typeof window !== "undefined" && window.location?.hostname) {
+  if (Platform.OS === "web" && typeof window !== "undefined" && window.location?.hostname) {
     const host = window.location.hostname;
     if (host === "localhost" || host === "127.0.0.1") {
       return `ws://${host}:8001`;

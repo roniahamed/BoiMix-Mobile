@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { View, Text, TouchableOpacity, ActivityIndicator, Alert } from "react-native";
+import { useCallback, useEffect, useMemo, useRef } from "react";
+import { View, Text, TouchableOpacity, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { FlashList } from "@shopify/flash-list";
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
@@ -14,6 +14,8 @@ import { useWishlistStore } from "@/stores/wishlist-store";
 import { useAuthStore } from "@/stores/auth-store";
 import { booksApi } from "@/lib/api/books";
 import { wishlistApi } from "@/lib/api/wishlist";
+import { toggleWishlist } from "@/lib/wishlist-sync";
+import { requestWishlistRefresh } from "@/lib/cart-sync-events";
 import { queryKeys } from "@/lib/api/query-keys";
 import { resolveMediaUrl } from "@/lib/utils/media";
 import { Colors } from "@/constants/theme";
@@ -24,11 +26,9 @@ const PAGE_SIZE = 20;
 export default function WishlistScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const queryClient = useQueryClient();
   const user = useAuthStore((state) => state.user);
-  const { bookIds, removeBook, clearWishlist } = useWishlistStore();
+  const { bookIds, clearWishlist, scopeId, syncPending: wishlistSyncPending, syncError: wishlistSyncError } = useWishlistStore();
   const ids = useMemo(() => Array.from(bookIds), [bookIds]);
-  const [removing, setRemoving] = useState<string[]>([]);
   const prefetched = useRef(new Set<string>());
 
   const server = useInfiniteQuery({
@@ -66,13 +66,14 @@ export default function WishlistScreen() {
     },
     initialPageParam: 0,
     getNextPageParam: (_last, pages) => pages.length * PAGE_SIZE < ids.length ? pages.length : undefined,
-    enabled: !user && ids.length > 0,
+    enabled: !user && scopeId === null && ids.length > 0,
   });
   const activeFeed = user ? server : guest;
-  const books = useMemo(() => activeFeed.data?.pages.flatMap((page) => page.data.results) ?? [], [activeFeed.data]);
-  const count = user ? (server.data?.pages[0]?.data.count ?? 0) : ids.length;
-  const isLoading = user ? server.isLoading : ids.length > 0 && guest.isLoading;
-  const isError = user ? server.isError && !server.data : guest.isError && !guest.data;
+  const books = useMemo(() => (activeFeed.data?.pages.flatMap((page) => page.data.results) ?? []).filter((book) => bookIds.has(book.id)), [activeFeed.data, bookIds]);
+  const scopeMatches = scopeId === (user?.id ?? null);
+  const count = scopeMatches ? ids.length : 0;
+  const isLoading = !scopeMatches || (user ? server.isLoading || wishlistSyncPending : ids.length > 0 && guest.isLoading);
+  const isError = user ? wishlistSyncError || (server.isError && !server.data) : guest.isError && !guest.data;
 
   const warmCovers = useCallback((items: BookCardBook[]) => {
     const urls = items.map((book) => {
@@ -93,21 +94,8 @@ export default function WishlistScreen() {
     if (last >= 0) warmCovers(booksRef.current.slice(last + 1, last + 13));
   }, [warmCovers]);
 
-  const handleRemove = async (bookId: string) => {
-    if (removing.includes(bookId)) return;
-    if (!user) { removeBook(bookId); return; }
-    setRemoving((current) => [...current, bookId]);
-    try {
-      await wishlistApi.removeItem(bookId);
-      removeBook(bookId);
-      await queryClient.invalidateQueries({ queryKey: queryKeys.me.wishlist() });
-    } catch {
-      Alert.alert("সরানো যায়নি", "আবার চেষ্টা করুন।");
-    } finally {
-      setRemoving((current) => current.filter((id) => id !== bookId));
-    }
-  };
-  const reload = () => user ? server.refetch() : guest.refetch();
+  const handleRemove = (bookId: string) => toggleWishlist(bookId);
+  const reload = () => { if (user) { requestWishlistRefresh(); server.refetch(); } else guest.refetch(); };
 
   return (
     <View className="flex-1 bg-surface-dark">

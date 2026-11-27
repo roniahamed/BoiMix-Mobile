@@ -1,5 +1,5 @@
-import { useCallback, useMemo } from "react";
-import { Text, TouchableOpacity, useWindowDimensions } from "react-native";
+import { memo, useCallback, useMemo, useState } from "react";
+import { Text, Pressable, Platform, useWindowDimensions } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import Animated, { cancelAnimation, scrollTo, useAnimatedRef, useFrameCallback, useReducedMotion, useSharedValue, withDecay } from "react-native-reanimated";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
@@ -18,13 +18,23 @@ const GROUPS = [
 ];
 
 type Entry = { category: BookCategory | null; key: string };
+function CategoryItem({ category, onPress }: { category: BookCategory | null; onPress: () => void }) {
+  const [pressed, setPressed] = useState(false);
+  const group = category ? priority(category) : -1;
+  const icon = group === 0 || group === 1 || group === 2 || group === 3 ? "school-outline" : group === 5 ? "library-outline" : "book-outline";
+  return (
+    <Pressable onPress={onPress} onPressIn={() => setPressed(true)} onPressOut={() => setPressed(false)} style={{ width: 62, marginRight: 7, ...(pressed ? { backgroundColor: Colors.primarySoft } : {}) }} className={`h-[68px] rounded-2xl items-center justify-center px-1 ${category ? "bg-white border border-border-light" : "bg-primary/10"}`} accessibilityRole="button">
+      <Ionicons name={icon} size={24} color={category ? Colors.secondary : Colors.primary} /><Text className={`text-[10px] font-semibold text-center mt-1 ${category ? "text-text-primary" : "text-primary"}`} numberOfLines={2}>{category ? category.nameBn || (category as BookCategory & { name_bn?: string }).name_bn || category.name : "সব বই"}</Text>
+    </Pressable>
+  );
+}
 function priority(category: BookCategory) {
   const name = `${category.name} ${category.nameBn || ""} ${(category as BookCategory & { name_bn?: string }).name_bn || ""} ${category.slug}`.toLowerCase();
   const match = GROUPS.findIndex((group) => group.some((term) => name.includes(term)));
   return match < 0 ? GROUPS.length : match;
 }
 
-export function CategoryCarousel({ categories }: { categories: BookCategory[] }) {
+export const CategoryCarousel = memo(function CategoryCarousel({ categories }: { categories: BookCategory[] }) {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const reducedMotion = useReducedMotion();
@@ -33,7 +43,7 @@ export function CategoryCarousel({ categories }: { categories: BookCategory[] })
   const cycle = entries.length * ITEM_WIDTH;
   const copies = sorted.length === 0 ? 1 : Math.max(3, Math.ceil(width / cycle) + 2);
   const repeated = useMemo(() => Array.from({ length: copies }, (_, index) => entries.map((entry) => ({ ...entry, key: `${entry.key}-${index}` }))).flat(), [copies, entries]);
-  const scrollRef = useAnimatedRef<Animated.ScrollView>();
+  const scrollRef = useAnimatedRef<any>();
   const offset = useSharedValue(0);
   const focused = useSharedValue(false);
   const touching = useSharedValue(false);
@@ -87,17 +97,20 @@ export function CategoryCarousel({ categories }: { categories: BookCategory[] })
     })
     .onFinalize(() => { touching.set(false); }), [cycle, gestureStart, offset, scrollRef, touching, coasting, reducedMotion]);
 
+  const renderCategory = useCallback(({ item }: { item: Entry }) => {
+    const category = item.category;
+    return <CategoryItem category={category} onPress={() => category ? router.push({ pathname: "/category/[slug]", params: { slug: category.slug, name: category.name, nameBn: category.nameBn || (category as BookCategory & { name_bn?: string }).name_bn || category.name } }) : router.push("/tabs/explore")} />;
+  }, [router]);
+
   return (
     <GestureDetector gesture={pan} touchAction="pan-y">
-    <Animated.ScrollView ref={scrollRef} horizontal scrollEnabled={false} showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16 }} style={{ marginBottom: 12 }}>
-      {repeated.map(({ category, key }) => {
-        const group = category ? priority(category) : -1;
-        const icon = group === 0 || group === 1 || group === 2 || group === 3 ? "school-outline" : group === 5 ? "library-outline" : "book-outline";
-        return <TouchableOpacity key={key} onPress={() => category ? router.push({ pathname: "/category/[slug]", params: { slug: category.slug, name: category.name, nameBn: category.nameBn || (category as BookCategory & { name_bn?: string }).name_bn || category.name } }) : router.push("/tabs/explore")} style={{ width: 62, marginRight: 7 }} className={`h-[68px] rounded-2xl items-center justify-center px-1 ${category ? "bg-white border border-border-light" : "bg-primary/10"}`} accessibilityRole="button">
-          <Ionicons name={icon} size={24} color={category ? Colors.secondary : Colors.primary} /><Text className={`text-[10px] font-semibold text-center mt-1 ${category ? "text-text-primary" : "text-primary"}`} numberOfLines={2}>{category ? category.nameBn || (category as BookCategory & { name_bn?: string }).name_bn || category.name : "সব বই"}</Text>
-        </TouchableOpacity>;
-      })}
-    </Animated.ScrollView>
+    {Platform.OS === "web" ? (
+      <Animated.ScrollView ref={scrollRef} horizontal scrollEnabled={false} showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16 }} style={{ marginBottom: 12 }}>
+        {repeated.map((item) => <CategoryItem key={item.key} category={item.category} onPress={() => item.category ? router.push({ pathname: "/category/[slug]", params: { slug: item.category.slug, name: item.category.name, nameBn: item.category.nameBn || (item.category as BookCategory & { name_bn?: string }).name_bn || item.category.name } }) : router.push("/tabs/explore")} />)}
+      </Animated.ScrollView>
+    ) : (
+      <Animated.FlatList ref={scrollRef} horizontal scrollEnabled={false} showsHorizontalScrollIndicator={false} data={repeated} renderItem={renderCategory} keyExtractor={(item) => item.key} getItemLayout={(_, index) => ({ length: ITEM_WIDTH, offset: ITEM_WIDTH * index, index })} initialScrollIndex={sorted.length ? entries.length : 0} initialNumToRender={12} maxToRenderPerBatch={12} windowSize={5} contentContainerStyle={{ paddingHorizontal: 16 }} style={{ marginBottom: 12 }} />
+    )}
     </GestureDetector>
   );
-}
+});

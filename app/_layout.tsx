@@ -7,6 +7,7 @@ import { useAuthEvents } from "@/lib/hooks/useAuthEvents";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { CartConfirmation } from "@/components/shared/CartConfirmation";
 import { OfflineBanner } from "@/components/shared/OfflineBanner";
+import { AccountListsSync } from "@/components/sync/AccountListsSync";
 import "../global.css";
 
 if (Platform.OS === "web" && typeof document !== "undefined") {
@@ -26,7 +27,7 @@ export default function RootLayout() {
         <QueryProvider>
           <OfflineBanner />
           <AppEventListeners />
-          <CartConfirmation />
+          <AccountListsSync />
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="index" />
             <Stack.Screen name="auth" />
@@ -52,6 +53,7 @@ export default function RootLayout() {
             <Stack.Screen name="settings/index" />
             <Stack.Screen name="support/index" />
           </Stack>
+          <CartConfirmation />
         </QueryProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

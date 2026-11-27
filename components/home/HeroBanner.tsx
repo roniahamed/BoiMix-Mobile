@@ -1,6 +1,6 @@
 import { View, Text, TouchableOpacity, useWindowDimensions, ScrollView } from "react-native";
 import { Image } from "expo-image";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "expo-router";
 
 
@@ -28,7 +28,7 @@ type Props = {
   autoScrollInterval?: number;
 };
 
-export function HeroBanner({ items, autoScrollInterval = 4000 }: Props) {
+export const HeroBanner = memo(function HeroBanner({ items, autoScrollInterval = 4000 }: Props) {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const [activeIndex, setActiveIndex] = useState(0);
@@ -132,4 +132,4 @@ export function HeroBanner({ items, autoScrollInterval = 4000 }: Props) {
       )}
     </View>
   );
-}
+});

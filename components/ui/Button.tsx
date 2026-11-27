@@ -1,4 +1,5 @@
-import { View, Text, TouchableOpacity, ActivityIndicator } from "react-native";
+import { useState } from "react";
+import { View, Text, Pressable, ActivityIndicator } from "react-native";
 import { Colors } from "@/constants/theme";
 
 type Variant = "primary" | "secondary" | "outline" | "ghost" | "danger";
@@ -44,6 +45,14 @@ const sizeStyles: Record<Size, { container: string; text: string }> = {
   lg: { container: "px-6 py-4 rounded-full", text: "text-lg" },
 };
 
+const pressedColors: Record<Variant, string> = {
+  primary: Colors.primaryDark,
+  secondary: Colors.secondaryDark,
+  outline: Colors.primarySoft,
+  ghost: Colors.primarySoft,
+  danger: "#B91C1C",
+};
+
 export function Button({
   label,
   onPress,
@@ -54,15 +63,20 @@ export function Button({
   fullWidth = true,
   leftIcon,
 }: ButtonProps) {
+  const [pressed, setPressed] = useState(false);
   const isDisabled = disabled || loading;
   const { container, text } = variantStyles[variant];
   const { container: sizeContainer, text: sizeText } = sizeStyles[size];
 
   return (
-    <TouchableOpacity
+    <Pressable
       onPress={onPress}
       disabled={isDisabled}
-      activeOpacity={0.75}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: isDisabled, busy: loading }}
+      onPressIn={() => setPressed(true)}
+      onPressOut={() => setPressed(false)}
+      style={pressed && !isDisabled ? { backgroundColor: pressedColors[variant] } : undefined}
       className={`
         flex-row items-center justify-center
         ${container} ${sizeContainer}
@@ -81,6 +95,6 @@ export function Button({
           <Text className={`${text} ${sizeText}`}>{label}</Text>
         </>
       )}
-    </TouchableOpacity>
+    </Pressable>
   );
 }
